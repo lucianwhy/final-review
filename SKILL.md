@@ -1,102 +1,102 @@
 ---
 name: final-review
-description: Use when user wants AI to help with final-exam review, cram sessions, question generation, knowledge-point tutoring, or exam-oriented note cleanup based on uploaded course materials. Prioritize past exam papers, teacher PPTs, homework, and structured Markdown study materials; convert raw files with markitdown; clean materials before generating questions, answers, and scoring-oriented explanations.
+description: 用于期末复习、考前突击、题目生成、知识点辅导、复习资料清洗等场景。基于用户上传课程资料开展工作，优先参考历年真题、老师PPT、平时作业和 Markdown 资料；先用 markitdown 转 Markdown，再清洗材料，最后生成题目、答案和偏考试得分导向的解析。
 ---
 
-# Final Review
+# 期末复习 Skill
 
-Exam-review skill for turning user materials into exam-oriented notes, questions, and explanations.
+把用户资料整理成偏考试导向的笔记、题目和解析。
 
-## Core Rules
+## 核心规则
 
-- Work from user-provided materials first. Do not rely on random external question banks.
-- Default to converting uploaded materials into Markdown with `markitdown`.
-- Clean Markdown before extracting knowledge points or generating questions.
-- Optimize for exam performance: what to memorize, what to write, how to score.
+- 先基于用户提供资料工作，不依赖随机外部题库。
+- 默认用 `markitdown` 把资料转成 Markdown。
+- 必须先清洗 Markdown，再提知识点、再出题。
+- 目标是考试表现：背什么、写什么、怎么拿分。
 
-## Source Priority
+## 题源优先级
 
-When generating questions or judging what matters most, use this priority:
+出题和判断重点时，按以下顺序优先：
 
-1. Past exam papers
-2. Teacher PPTs
-3. Homework / reading assignments
-4. Crash-course question sets
-5. AI supplemental questions
+1. 历年真题
+2. 老师 PPT
+3. 平时作业 / 阅读作业
+4. 速成课题目
+5. AI 补充题
 
-Crash-course materials have lower question-source priority, but high value for:
+速成课题目优先级较低，但在下面几个方面价值高：
 
-- identifying core knowledge points
-- building chapter structure
-- summarizing key ideas, common traps, and review order
+- 提炼核心知识点
+- 搭章节结构
+- 总结重点、易错点和复习顺序
 
-## Material Workflow
+## 材料处理流程
 
-### Step 1: Clarify Exam Shape
+### 第一步：先明确考试长相
 
-Before deep review work, first confirm as much of this as possible:
+开始深入复习前，优先确认这些信息：
 
-- what question types the exam uses
-- which parts the teacher emphasized
-- whether there are common proof / short-answer / objective-question patterns
-- whether the user wants plain text, HTML, or both
+- 考试有哪些题型
+- 老师重点强调了什么
+- 是否有常见证明题 / 简答题 / 客观题套路
+- 用户要普通文本、HTML，还是两者都要
 
-If user already gave this, do not ask again.
+如果用户已经说过，不要重复问。
 
-### Step 2: Convert Everything to Markdown
+### 第二步：全部转 Markdown
 
-Convert PPTs, PDFs, Word files, images, notes, and other study materials into Markdown.
+把 PPT、PDF、Word、图片、笔记等资料统一转成 Markdown。
 
-Preferred tool:
+优先工具：
 
 ```bash
 markitdown
 ```
 
-Principle:
+顺序固定：
 
-- convert first
-- clean second
-- extract knowledge points third
-- generate questions last
+- 先转
+- 再清洗
+- 再提知识点
+- 最后出题
 
-### Step 3: Clean Markdown
+### 第三步：清洗 Markdown
 
-Cleaning is required. Review material is not archival storage.
+清洗是必须步骤。复习材料不是档案存储。
 
-Focus on:
+重点处理：
 
-- removing garbled text
-- removing repeated content
-- removing low-value filler
-- merging overlapping definitions and conclusions
-- keeping definitions, properties, theorems, standard methods, common exam patterns, and traps
+- 去乱码
+- 去重复
+- 去低价值废话
+- 合并重复定义和结论
+- 保留定义、性质、定理、标准方法、常见考法、易错点
 
-Target:
+目标：
 
-- clear
-- memorizable
-- exam-usable
+- 清晰
+- 可背
+- 可考
 
-## Question Generation Rules
+## 出题规则
 
-- Generate questions according to real exam question types, not generic balance.
-- Each knowledge point should usually produce `1~6` questions.
-- Denser, higher-frequency, more testable knowledge points get more questions.
-- Thin or low-frequency knowledge points get fewer questions.
-- Match question type to likely exam style.
+- 按真实考试题型出题，不做平均分配。
+- 每个知识点通常出 `1~6` 题。
+- 越密、越高频、越能出题的知识点，题越多。
+- 越薄、越低频的知识点，题越少。
+- 题型要匹配最可能考法。
 
-Examples:
+例如：
 
-- objective / recognition-heavy topics -> choice, true-false, fill-in
-- definition / comparison-heavy topics -> short answer
-- reasoning / proof / construction-heavy topics -> subjective problems
+- 识记辨析型 -> 选择、判断、填空
+- 定义比较型 -> 简答
+- 推理证明构造型 -> 主观题
 
-## Lightweight Source Labels
+## 轻量题源标记
 
-Do not require file-level or page-level tracing by default.
+默认不要求追溯到文件级、页码级。
 
-Each generated question should still carry a lightweight category label when practical, such as:
+但每道题尽量保留轻量类别级题源标记，例如：
 
 - `题源：历年真题`
 - `题源：老师PPT`
@@ -104,69 +104,149 @@ Each generated question should still carry a lightweight category label when pra
 - `题源：速成课框架改编`
 - `题源：AI补充`
 
-This is category-level guidance, not strict audit logging.
+这是类别级提示，不是严格审计追踪。
 
-## Output Rules
+## 输出规则
 
-### Plain Text Output
+### 普通文本输出
 
-- Put questions first.
-- Put answers and explanations at the end.
-- Keep question area and answer area clearly separated.
+- 前面放题目。
+- 后面统一放答案和解析。
+- 题目区和答案区要明显分开。
 
-### HTML Output
+### HTML 输出
 
-- Answers may appear under each question.
-- Answers should be collapsed by default.
-- User should expand to see answer and explanation.
+- 答案可以放在题目下面。
+- 但答案默认折叠隐藏。
+- 用户点开后再看答案和解析。
 
-## Explanation Rules
+## 解析规则
 
-Every explanation should help user score better on the exam, not just understand content.
+每道解析都要服务考试拿分，不只是解释内容。
 
-Try to include:
+尽量包含：
 
-- correct answer / reference answer
-- tested knowledge point
-- common exam pattern
-- how to score
+- 正确答案 / 参考答案
+- 本题考的知识点
+- 常见考法
+- 怎么拿分
 
-### Objective Questions
+### 客观题
 
-For choice, true-false, fill-in, and similar objective questions, focus on:
+选择、判断、填空等客观题，重点补：
 
 - `这题核心知识点`
-- key definition / property / decision rule
-- easy confusion point
+- 关键定义 / 性质 / 判定依据
+- 易混点
 
-### Subjective Questions
+### 主观题
 
-For short answer, proof, analysis, computation, construction, and similar subjective questions, focus on:
+简答、证明、分析、计算、构造等主观题，重点补：
 
 - `这题答题核心点`
 - `必须出现`
 - `常见失分点`
-- scoring-oriented answer structure
+- 偏得分导向的作答结构
 
-## Scoring-Oriented Guidance
+## 得分导向提示
 
-Prefer actionable exam advice, not motivational filler.
+优先给可执行考试建议，不写鸡汤废话。
 
-Examples:
+例如：
 
-- see a true-false question -> check boundary conditions or counterexamples first
-- see a short answer -> write definition, then property, then conclusion
-- see a proof -> state knowns, target, and chosen theorem / definition entry point
-- if full solution is unclear -> write core definition, key property, and conclusion first to grab partial credit
+- 看到判断题，先看边界条件和反例
+- 看到简答题，先写定义，再写性质，再写结论
+- 看到证明题，先写已知、求证和入口定理 / 定义
+- 不会完整作答时，先写核心定义、关键性质、结论，先抢步骤分
 
-## AGENT.md / CLAUDE.md Sync
+## 运行后同步规则
 
-When this skill is used in a repo that has `AGENT.md` or `CLAUDE.md`, keep the short-form persistent rules aligned with this skill:
+当仓库里存在 `AGENT.md`、`CLAUDE.md`，或用户提到同类长期规则文件时，运行这个 skill 后应默认做一次同步检查，而不是只在当前对话里临时遵守。
 
-- use `markitdown`
-- clean Markdown before question generation
-- prioritize past papers, PPTs, homework, then crash-course materials
-- separate questions and answers
-- add `这题核心知识点` for objective questions
-- add `这题答题核心点` / `必须出现` / `常见失分点` for subjective questions
-- keep explanations exam- and scoring-oriented
+### 同步目标
+
+目标不是把整份 `SKILL.md` 原样复制进去，而是把**应长期生效的高优先级规则**同步到 `AGENT.md / CLAUDE.md` 中，让以后不显式触发 skill 时，Agent 也尽量按同一套复习方法工作。
+
+分工应明确：
+
+- `SKILL.md`：保存完整流程、细节协议、使用场景
+- `AGENT.md / CLAUDE.md`：保存长期默认行为、关键优先级、稳定输出规范
+
+### 什么时候要同步
+
+满足下面任一情况，就应该主动检查是否需要同步：
+
+1. 用户刚确认或修改了复习规则
+2. 用户要求“以后默认这样做”
+3. 当前仓库明显长期用于期末复习
+4. 发现 `AGENT.md / CLAUDE.md` 里的旧规则与本 skill 不一致
+5. 当前 skill 新增了会长期影响行为的重要规则
+
+### 同步时至少要写进去的内容
+
+同步到 `AGENT.md / CLAUDE.md` 的内容，至少应包含下面这些稳定规则：
+
+1. 题源优先级  
+   `历年真题 > 老师PPT > 平时作业/阅读作业 > 速成课题目 > AI补充题`
+
+2. 速成课定位  
+   速成课题目优先级低，但在知识点梳理、结构设计、重点判断上价值高
+
+3. Markdown 处理流程  
+   所有上传材料优先用 `markitdown` 转 Markdown；先清洗，再提知识点，再出题
+
+4. 清洗原则  
+   去乱码、去重复、去废话，保留核心定义、性质、结论、方法、易错点
+
+5. 出题规则  
+   先按真实考试题型出题；每个知识点通常出 `1~6` 题；知识点越密、越高频、考法越多，题量越多
+
+6. 题源标记规则  
+   默认只要求轻量类别级标记，不要求文件级、页码级追溯，除非用户明确要求
+
+7. 题答分离规则  
+   普通文本输出时题目在前、答案统一放最后；HTML 输出时答案默认折叠
+
+8. 客观题解析规则  
+   必须重点补 `这题核心知识点`，并说明关键定义、性质、判定依据、易混点
+
+9. 主观题解析规则  
+   必须重点补 `这题答题核心点`、`必须出现`、`常见失分点`、标准作答框架
+
+10. 得分导向规则  
+    解析默认服务考试拿分，优先说明先写什么、哪些词必须出现、哪些步骤能抢步骤分、哪些错误最容易丢分
+
+### 同步策略
+
+同步时遵守下面策略：
+
+1. **优先更新，不要并存两套互相冲突规则**  
+   如果 `AGENT.md / CLAUDE.md` 里已有旧版复习规则，应直接改成与本 skill 一致，不要把新旧两版都留着。
+
+2. **保留其他无关长期规则**  
+   如果文件里还有语言风格、命令行偏好、输出习惯等与本 skill 无关的规则，不要误删。
+
+3. **写成长期默认行为，不写成一次性对话备注**  
+   例如应写“默认使用 `markitdown` 转 Markdown”，而不是“本次任务建议使用 `markitdown`”。
+
+4. **长度可适当偏长，但结构要清楚**  
+   对期末复习仓库，`AGENT.md` 可以比普通短规则更长，因为这些规则本身就是仓库核心资产。
+
+5. **如果仓库里没有长期规则文件**  
+   可提示用户创建；如果当前任务就是在维护 skill 仓库，也可直接补一份 `AGENT.md` 作为默认规则文件。
+
+### 用户例外
+
+只有当用户明确表达下面意思时，才不自动同步：
+
+- “不要改 `AGENT.md` / `CLAUDE.md`”
+- “只在这次对话里这么做”
+- “先不要写进长期规则”
+
+否则，默认认为这类规则应该沉淀到长期规则文件。
+
+### 最终目标
+
+- skill 负责完整流程
+- `AGENT.md / CLAUDE.md` 负责长期默认行为
+- 当前对话规则、skill 规则、长期规则三者尽量一致
