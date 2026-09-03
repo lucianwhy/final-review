@@ -1,6 +1,6 @@
 # final-review
 
-期末复习 Skill。核心不是脚本工具链，而是**一套稳定、可复用、偏考试得分导向的复习规则**。
+期末复习 Skill + 可选的 LangGraph Agent。核心不是脚本工具链，而是**一套稳定、可复用、偏考试得分导向的复习规则**；本仓库同时提供可运行的 Python Agent 封装。
 
 它适合这样的场景：
 
@@ -8,6 +8,7 @@
 - 希望 AI 基于资料整理知识点、清洗笔记、生成题目、补解析
 - 希望题目更贴近真实考试，而不是随机题库风格
 - 希望答案解析顺手补“怎么写才能得分”
+- （可选）希望用 LangGraph 流水线本地跑通同一套规则
 
 ## 这个 Skill 做什么
 
@@ -122,12 +123,17 @@ HTML 输出：
 
 ## 仓库结构
 
-这个仓库现在以**规则型 Skill**为主：
+这个仓库现在包含：
 
-- [`SKILL.md`](./SKILL.md)：完整工作流和规则
-- [`AGENT.md`](./AGENT.md)：可直接复制进 Agent/Claude 配置的长版默认规则
+- **规则型 Skill（源文件）**
+  - [`SKILL.md`](./SKILL.md)：完整工作流和规则
+  - [`AGENT.md`](./AGENT.md)：可直接复制进 Agent/Claude 配置的长版默认规则
+- **可运行 LangGraph Agent**
+  - [`langgraph-agent/`](./langgraph-agent/)：Python 包，默认优先加载上述本地 skill 文件
 
-## 如何使用
+英文说明见 [`README.en.md`](./README.en.md)（当前以 Skill 文档为主；Agent 细节见 `langgraph-agent/README.md`）。
+
+## 如何使用（Skill）
 
 你可以把这个 Skill 当成：
 
@@ -143,6 +149,22 @@ HTML 输出：
 - `AGENT.md / CLAUDE.md` 里的长期默认规则
 
 保持一致，避免当前对话和长期配置两套逻辑打架。
+
+## 如何使用（LangGraph Agent）
+
+若要在本地用 Python / LangGraph 跑同一套复习流水线，请进入：
+
+```bash
+cd langgraph-agent
+```
+
+完整安装、配置与演示步骤见：**[`langgraph-agent/README.md`](./langgraph-agent/README.md)**。
+
+要点：
+
+- 默认读取本仓库根目录的 `SKILL.md` / `AGENT.md`（本地优先）
+- 也可通过 `SKILL_URL` / `AGENT_URL` 或 `--skill-url` 强制使用远端 skill
+- 无 `OPENAI_API_KEY` 时走 mock 演示：`bash demos/run_mock.sh`
 
 ## 学科扩展
 
@@ -169,7 +191,7 @@ HTML 输出：
 
 ## Contributing
 
-欢迎你根据真实复习实践更新这个 Skill。
+欢迎你根据真实复习实践更新这个 Skill，或改进 `langgraph-agent/` 封装。
 
 尤其欢迎这几类改进：
 
@@ -179,12 +201,13 @@ HTML 输出：
 - 更强的客观题 / 主观题解析模板
 - 更实用的考试得分技巧总结
 - 某个具体学科的专用复习规则和资料
+- Agent 流水线节点、mock 模式、输出格式等方面的改进
 
 推荐贡献流程：
 
 1. Fork 本仓库
 2. 从你的 fork 新建一个分支
-3. 在分支中修改 `SKILL.md`、`AGENT.md`、`README.md` 或补充学科资料
+3. 在分支中修改 `SKILL.md`、`AGENT.md`、`README.md`、`langgraph-agent/` 或补充学科资料
 4. 提交 commit
 5. 推送到你的 fork
 6. 向主仓库发起 Pull Request
