@@ -20,3 +20,16 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime / credentials / tooling
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.tools/

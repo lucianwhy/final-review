@@ -1,0 +1,21 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2.3.10
+    user: root
+    command: start --bind 0.0.0.0:8000 --user ${SURREAL_USERNAME:-root} --pass ${SURREAL_PASSWORD:?Set SURREAL_PASSWORD in .env} rocksdb:/data/review.db
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - surreal-data:/data
+  agent:
+    build: .
+    env_file: .env
+    environment:
+      SURREAL_URL: http://surrealdb:8000
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - surrealdb
+    restart: on-failure:3
+volumes:
+  surreal-data:

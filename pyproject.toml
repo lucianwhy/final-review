@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "final-review-agent"
+version = "0.1.0"
+description = "Exam-oriented single agent backend with LangGraph and SurrealDB RAG"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1",
+  "pydantic-settings>=2.7,<3", "python-multipart>=0.0.20,<1",
+  "langchain>=1,<2", "langgraph>=1,<2", "langchain-openai>=1,<2",
+  "langchain-text-splitters>=1,<2", "markitdown[pdf,pptx,docx]>=0.1,<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/final_review"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires SURREAL_TEST_URL (real SurrealDB)"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

@@ -1,0 +1,28 @@
+name: backend-tests
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.10.0"
+      - run: uv sync --frozen --python 3.13
+      - run: uv run ruff check src tests examples eval
+      - run: uv run ruff format --check src tests examples eval
+      - name: Start isolated database
+        run: |
+          docker run -d --name surreal-test -p 8000:8000 surrealdb/surrealdb:v2.3.10 start --user root --pass test-only-final-review memory
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - run: uv run pytest -q
+        env:
+          SURREAL_TEST_URL: http://127.0.0.1:8000
+          SURREAL_TEST_PASSWORD: test-only-final-review
+      - run: uv build
