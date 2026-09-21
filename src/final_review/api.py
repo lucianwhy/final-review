@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from markitdown import MarkItDown
-from openai import OpenAIError
+from openai import OpenAI, OpenAIError
 from pydantic import ValidationError
 
 from .agent import FinalReviewAgent, SessionConflict
@@ -19,6 +19,8 @@ from .rendering import render_markdown
 from .schemas import (
     AgentRequest,
     AgentResponse,
+    ChatRequest,
+    ChatResponse,
     Identifier,
     MaterialInput,
     ResumeRequest,
@@ -62,6 +64,15 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             app.state.agent = agent
             yield
             return
+        # The standalone chat API can run before the RAG store and its two model
+        # providers have been configured. Agent endpoints remain unavailable.
+        if not (
+            settings.llm_api_key.get_secret_value()
+            and settings.embedding_api_key.get_secret_value()
+        ):
+            app.state.agent = None
+            yield
+            return
         store = SurrealStore(settings)
         try:
             model, embeddings = build_models(settings)
@@ -92,6 +103,8 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             raise HTTPException(401, "需要有效 Bearer Token")
 
     def runtime():
+        if app.state.agent is None:
+            raise HTTPException(503, "资料库服务尚未配置")
         return app.state.agent
 
     @app.exception_handler(SessionConflict)
@@ -130,6 +143,33 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
     @app.get("/health")
     def health():
         return {"status": "ok", "version": "0.1.0"}
+
+    @app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(authorize)])
+    def chat(request: ChatRequest):
+        api_key = settings.deepseek_api_key.get_secret_value()
+        if not api_key:
+            raise HTTPException(503, "尚未配置 DEEPSEEK_API_KEY")
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "你是考前笔记的复习助手。用中文回答，清晰、简洁、以考试得分为导向。"
+                    "资料不足时说明不确定性，不要编造课程材料。"
+                ),
+            },
+            *[item.model_dump() for item in request.history],
+            {"role": "user", "content": request.message},
+        ]
+        client = OpenAI(api_key=api_key, base_url=settings.deepseek_base_url)
+        completion = client.chat.completions.create(
+            model=settings.deepseek_model,
+            messages=messages,
+            max_tokens=1200,
+        )
+        reply = completion.choices[0].message.content
+        if not reply:
+            raise HTTPException(502, "模型未返回可显示的内容")
+        return ChatResponse(reply=reply, model=settings.deepseek_model)
 
     @app.post("/knowledge/ingest", dependencies=[Depends(authorize)])
     def ingest(request: MaterialInput):

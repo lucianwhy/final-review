@@ -87,6 +87,13 @@ def test_invalid_request_never_reaches_model(system):
         assert system.model.retrieval_calls == 0
 
 
+def test_chat_reports_missing_deepseek_key(system):
+    with TestClient(create_app(system.settings, system)) as client:
+        response = client.post("/api/chat", json={"message": "帮我复习需求分析"})
+        assert response.status_code == 503
+        assert response.json()["detail"] == "尚未配置 DEEPSEEK_API_KEY"
+
+
 def test_real_pptx_conversion(system):
     from io import BytesIO
 

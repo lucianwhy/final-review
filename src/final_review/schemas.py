@@ -45,6 +45,21 @@ class AgentRequest(Model):
     exam_profile: ExamProfile | None = None
 
 
+class ChatMessage(Model):
+    role: Literal["user", "assistant"]
+    content: Annotated[str, Field(min_length=1, max_length=4000)]
+
+
+class ChatRequest(Model):
+    message: Text
+    history: list[ChatMessage] = Field(default_factory=list, max_length=20)
+
+
+class ChatResponse(Model):
+    reply: Text
+    model: str
+
+
 class ResumeRequest(Model):
     course_id: Identifier
     session_id: Identifier
