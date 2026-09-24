@@ -154,11 +154,14 @@ def build_models(settings: Settings):
         max_retries=2,
         temperature=0,
     )
+    # OpenAI supports the dimensions parameter; most third-party providers
+    # (SiliconFlow, local models, etc.) do not and will return BadRequestError.
+    use_dimensions = "openai.com" in settings.embedding_base_url
     embeddings = OpenAIEmbeddings(
         model=settings.embedding_model,
         api_key=embedding_key,
         base_url=settings.embedding_base_url,
-        dimensions=settings.embedding_dimensions,
+        **({"dimensions": settings.embedding_dimensions} if use_dimensions else {}),
         request_timeout=settings.model_timeout,
         max_retries=2,
         check_embedding_ctx_length=False,
