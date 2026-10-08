@@ -38,7 +38,9 @@ def fixture_draft(context, plan):
     for item in plan.allocations:
         for _ in range(item.question_count):
             order = len(questions) + 1
-            global_order = context.question_slots[order - 1]["order"] if context.question_slots else order
+            global_order = (
+                context.question_slots[order - 1]["order"] if context.question_slots else order
+            )
             question = {
                 "id": f"q{order}",
                 "order": order,
