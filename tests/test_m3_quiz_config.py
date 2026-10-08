@@ -378,8 +378,14 @@ def test_agent_natural_formal_request_cannot_use_legacy_profile(quiz_system):
     "preferences,blueprint,field",
     [
         ({"difficulty": "arbitrary"}, [], "difficulty"),
-        ({}, [{"question_type": "choice", "question_count": 60, "score": 1},
-              {"question_type": "proof", "question_count": 60, "score": 1}], "blueprint"),
+        (
+            {},
+            [
+                {"question_type": "choice", "question_count": 60, "score": 1},
+                {"question_type": "proof", "question_count": 60, "score": 1},
+            ],
+            "blueprint",
+        ),
     ],
 )
 def test_invalid_exam_defaults_clarify_instead_of_provider_error(
