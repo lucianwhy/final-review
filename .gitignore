@@ -1,5 +1,6 @@
 # 学生私有复习数据（不上传）
 storage/
+uploads/
 
 # Python
 __pycache__/
@@ -28,6 +29,8 @@ Thumbs.db
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
@@ -36,3 +39,5 @@ build/
 .coverage
 htmlcov/
 .tools/
+logs/
+exports/

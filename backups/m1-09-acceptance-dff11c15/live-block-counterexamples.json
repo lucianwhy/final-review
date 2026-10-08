@@ -1,0 +1,250 @@
+{
+  "model": "qwen3-vl-plus",
+  "checks": [
+    "image/native/note pass; fabricated fact and changed code rejected",
+    "unreadable original cannot certify a supplied candidate"
+  ],
+  "cases": [
+    {
+      "kind": "knowledge",
+      "title": "核验反例",
+      "blocks": [
+        {
+          "title": "图片方法语义",
+          "text": "GET 用于读取资源，POST 用于提交数据。",
+          "evidence": [
+            {
+              "source_id": "image-page",
+              "quote": "GET 用于读取资源，POST 用于提交数据。",
+              "origin": "image"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b1",
+          "quality": "verified",
+          "issues": [],
+          "warnings": []
+        },
+        {
+          "title": "原生代码",
+          "text": "request.getParameter(\"name\") 读取参数。",
+          "evidence": [
+            {
+              "source_id": "native-1",
+              "quote": "request.getParameter(\"name\")",
+              "origin": "native"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b2",
+          "quality": "verified",
+          "issues": [],
+          "warnings": []
+        },
+        {
+          "title": "教学备注",
+          "text": "教师备注：参数名 name 区分大小写。",
+          "evidence": [
+            {
+              "source_id": "note-1",
+              "quote": "参数名 name 区分大小写。",
+              "origin": "note"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b3",
+          "quality": "verified",
+          "issues": [],
+          "warnings": []
+        },
+        {
+          "title": "伪造事实",
+          "text": "GET 方法会自动加密所有网络请求。",
+          "evidence": [
+            {
+              "source_id": "image-page",
+              "quote": "GET 用于读取资源",
+              "origin": "image"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b4",
+          "quality": "review_needed",
+          "issues": [
+            "‘GET 方法会自动加密所有网络请求’无任何来源支持；图片中仅说明‘GET 用于读取资源’，未提及加密；该说法错误且无依据。",
+            "知识块事实或可读性核验未通过"
+          ],
+          "warnings": []
+        },
+        {
+          "title": "被改坏的代码",
+          "text": "request.getParameter(\"password\") 读取参数。",
+          "evidence": [
+            {
+              "source_id": "native-1",
+              "quote": "request.getParameter(\"name\")",
+              "origin": "native"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b5",
+          "quality": "review_needed",
+          "issues": [
+            "候选代码 'request.getParameter(\"password\")' 与证据 native-1 中的 'request.getParameter(\"name\")' 不一致，属于改坏原代码。",
+            "知识块事实或可读性核验未通过"
+          ],
+          "warnings": []
+        }
+      ],
+      "uncertainties": [],
+      "quality": "partial",
+      "issues": [
+        "伪造事实：‘GET 方法会自动加密所有网络请求’无任何来源支持；图片中仅说明‘GET 用于读取资源’，未提及加密；该说法错误且无依据。",
+        "伪造事实：知识块事实或可读性核验未通过",
+        "被改坏的代码：候选代码 'request.getParameter(\"password\")' 与证据 native-1 中的 'request.getParameter(\"name\")' 不一致，属于改坏原代码。",
+        "被改坏的代码：知识块事实或可读性核验未通过"
+      ],
+      "warnings": [],
+      "review": {
+        "block_reviews": [
+          {
+            "block_id": "b1",
+            "supported": true,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": []
+          },
+          {
+            "block_id": "b2",
+            "supported": true,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": []
+          },
+          {
+            "block_id": "b3",
+            "supported": true,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": []
+          },
+          {
+            "block_id": "b4",
+            "supported": false,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": [
+              {
+                "kind": "unsupported_fact",
+                "message": "‘GET 方法会自动加密所有网络请求’无任何来源支持；图片中仅说明‘GET 用于读取资源’，未提及加密；该说法错误且无依据。"
+              }
+            ]
+          },
+          {
+            "block_id": "b5",
+            "supported": false,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": [
+              {
+                "kind": "code_mismatch",
+                "message": "候选代码 'request.getParameter(\"password\")' 与证据 native-1 中的 'request.getParameter(\"name\")' 不一致，属于改坏原代码。"
+              }
+            ]
+          }
+        ],
+        "missing_evidence_ids": [],
+        "page_uncertainties_resolved": true
+      },
+      "sources": [
+        {
+          "source_id": "native-1",
+          "origin": "native",
+          "text": "request.getParameter(\"name\") 读取参数。"
+        },
+        {
+          "source_id": "note-1",
+          "origin": "note",
+          "text": "教师备注：参数名 name 区分大小写。"
+        },
+        {
+          "source_id": "image-page",
+          "origin": "image",
+          "text": "原页图片见附图",
+          "ocr_hint": "GET 用于读取资源，POST 用于提交数据。",
+          "region": [
+            0,
+            0,
+            1000,
+            1000
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "knowledge",
+      "title": "核验反例",
+      "blocks": [
+        {
+          "title": "图片方法语义",
+          "text": "GET 用于读取资源，POST 用于提交数据。",
+          "evidence": [
+            {
+              "source_id": "image-page",
+              "quote": "GET 用于读取资源，POST 用于提交数据。",
+              "origin": "image"
+            }
+          ],
+          "uncertainties": [],
+          "block_id": "b1",
+          "quality": "review_needed",
+          "issues": [
+            "evidence 引用的文本 'GET 用于读取资源，POST 用于提交数据。' 在 image-page 中无法辨认（图片为全白/模糊，无可见文字）",
+            "知识块事实或可读性核验未通过"
+          ],
+          "warnings": []
+        }
+      ],
+      "uncertainties": [],
+      "quality": "review_needed",
+      "issues": [
+        "图片方法语义：evidence 引用的文本 'GET 用于读取资源，POST 用于提交数据。' 在 image-page 中无法辨认（图片为全白/模糊，无可见文字）",
+        "图片方法语义：知识块事实或可读性核验未通过"
+      ],
+      "warnings": [],
+      "review": {
+        "block_reviews": [
+          {
+            "block_id": "b1",
+            "supported": false,
+            "readable": true,
+            "uncertainties_resolved": true,
+            "issues": [
+              {
+                "kind": "unsupported_fact",
+                "message": "evidence 引用的文本 'GET 用于读取资源，POST 用于提交数据。' 在 image-page 中无法辨认（图片为全白/模糊，无可见文字）"
+              }
+            ]
+          }
+        ],
+        "missing_evidence_ids": [],
+        "page_uncertainties_resolved": false
+      },
+      "sources": [
+        {
+          "source_id": "image-page",
+          "origin": "image",
+          "text": "原页图片见附图",
+          "ocr_hint": "",
+          "region": [
+            0,
+            0,
+            1000,
+            1000
+          ]
+        }
+      ]
+    }
+  ],
+  "status": "passed"
+}

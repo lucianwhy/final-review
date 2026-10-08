@@ -5,13 +5,27 @@ build-backend = "hatchling.build"
 [project]
 name = "final-review-agent"
 version = "0.1.0"
-description = "Exam-oriented single agent backend with LangGraph and SurrealDB RAG"
+description = "Exam-oriented review backend with LangGraph and PostgreSQL/pgvector RAG"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1",
-  "pydantic-settings>=2.7,<3", "python-multipart>=0.0.20,<1",
-  "langchain>=1,<2", "langgraph>=1,<2", "langchain-openai>=1,<2",
-  "langchain-text-splitters>=1,<2", "markitdown[pdf,pptx,docx]>=0.1,<1",
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.34,<1",
+  "httpx>=0.28,<1",
+  "pydantic-settings>=2.7,<3",
+  "python-multipart>=0.0.20,<1",
+  "langchain>=1,<2",
+  "langgraph>=1,<2",
+  "langchain-openai>=1,<2",
+  "langchain-text-splitters>=1,<2",
+  "markitdown[pdf,pptx,docx]>=0.1,<1",
+  "psycopg[binary]>=3.2,<4",
+  "argon2-cffi>=23.1,<26",
+  "Pillow>=11,<13",
+  "pdfplumber>=0.11,<1",
+  "python-pptx>=1,<2",
+  "pypandoc-binary>=1.15,<2",
+  "playwright>=1.50,<2",
+  "python-docx>=1.1,<2",
 ]
 
 [dependency-groups]
@@ -22,10 +36,14 @@ packages = ["src/final_review"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: requires SURREAL_TEST_URL (real SurrealDB)"]
+markers = ["integration: requires an explicit real database URL"]
 
 [tool.ruff]
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# SQL statements in the real-database proof are kept as executable assertions.
+"tests/test_postgres_migrations.py" = ["E501"]

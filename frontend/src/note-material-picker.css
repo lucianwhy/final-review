@@ -1,0 +1,93 @@
+.note-source-backdrop{position:fixed;z-index:10020;inset:0;display:grid;place-items:center;padding:22px;background:#102a3c94;backdrop-filter:blur(2px)}
+.note-source-dialog{display:flex;flex-direction:column;width:min(800px,100%);max-height:min(820px,92dvh);overflow:hidden;border:1px solid #d7e3de;border-radius:14px;background:#fffefa;color:#193650;box-shadow:0 26px 72px #0926385c}
+.note-source-head{display:flex;justify-content:space-between;gap:20px;padding:24px 28px 19px;border-bottom:1px solid #e3e9e5;background:linear-gradient(120deg,#f1f7f2,#fffefa)}
+.note-source-head small{color:#9a644f;font-size:11px;font-weight:700;letter-spacing:.08em}
+.note-source-head h2{margin:5px 0 5px;font:600 27px Georgia,"Songti SC",serif}
+.note-source-head p{margin:0;color:#617987;font-size:13px}
+.note-source-close{align-self:start;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#607785;font-size:24px}
+.note-source-close:hover{background:#e4eee8}
+.note-source-tools{display:grid;gap:13px;padding:18px 28px 15px;border-bottom:1px solid #e8ece7}
+.note-upload-panel{display:grid;gap:10px;padding:14px 28px;border-bottom:1px solid #e8ece7;background:#f8faf7}.note-upload-drop{display:flex;align-items:center;justify-content:center;gap:10px;min-height:68px;border:1.5px dashed #91b4ad;border-radius:8px;background:#fffefa;color:#2b5263;font-size:13px}.note-upload-drop.dragging{border-color:#1b665e;background:#e7f3ec}.note-upload-drop span{color:#80939a}.note-upload-drop button,.note-upload-details>button{padding:8px 12px;border:1px solid #205d68;border-radius:6px;background:#ecf5ef;color:#185461;font:700 12px "Microsoft YaHei UI",sans-serif;cursor:pointer}.note-upload-drop input{position:absolute;width:1px;height:1px;opacity:0}.note-upload-details{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;align-items:end}.note-upload-details label{display:grid;gap:4px;color:#506b7b;font-size:11px}.note-upload-details input{width:100%;min-width:0;min-height:36px;padding:7px 9px;border:1px solid #b9cfd0;border-radius:6px;background:#fff;color:#193650}.note-upload-details>button{min-height:36px;background:#174f73;color:#fff}.note-upload-details>button:disabled{opacity:.5;cursor:not-allowed}.note-upload-panel>small{color:#71858d;font-size:11px}.note-upload-panel>p{margin:0;color:#286b61;font-size:12px}
+.note-source-search{display:grid;gap:6px;color:#506b7b;font-size:12px;font-weight:700}
+.note-source-search input{width:100%;min-height:42px;padding:9px 12px;border:1px solid #b9cfd0;border-radius:7px;background:#fff;color:#193650;font:14px "Microsoft YaHei UI","PingFang SC",sans-serif}
+.note-source-search input:focus-visible,.note-source-dialog button:focus-visible,.note-source-row input:focus-visible{outline:2px solid #4b8295;outline-offset:2px}
+.note-source-select-all{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:#687e87;font-size:12px}
+.note-source-select-all span{margin-right:auto}
+.note-source-select-all button{padding:4px 0;border:0;background:transparent;color:#215f70;font-size:12px;font-weight:700}
+.note-source-select-all button:disabled{color:#a0adb0;cursor:not-allowed}
+.note-source-controls{flex:0 1 auto;min-height:80px;overflow-y:auto;overscroll-behavior:contain}
+.note-source-head,.note-source-footer{flex-shrink:0}
+.note-source-resize{display:flex;flex:0 0 26px;align-items:center;justify-content:center;gap:8px;border-top:1px solid #d7e3de;border-bottom:1px solid #d7e3de;background:#f3f8f4;color:#617987;font-size:11px;cursor:ns-resize;touch-action:none;user-select:none}
+.note-source-resize>span:first-child{transform:rotate(90deg);font-size:18px;line-height:1}
+.note-source-resize:hover,.note-source-resize:focus-visible,.resizing .note-source-resize{background:#e2f0e8;color:#1d655e}
+.note-source-resize:focus-visible{outline:2px solid #4b8295;outline-offset:-2px}
+.note-source-dialog.resizing{user-select:none;cursor:ns-resize}
+.note-source-error{flex-shrink:0}
+.note-source-list{flex:1;min-height:150px;overflow:auto;padding:8px 18px 14px;overscroll-behavior:contain}
+.note-source-row{display:flex;align-items:flex-start;gap:13px;margin:4px 0;padding:14px 12px;border:1px solid transparent;border-radius:9px;cursor:pointer;transition:background .15s,border-color .15s}
+.note-source-row:hover{background:#f4f8f4}
+.note-source-row.selected{border-color:#a8c9bd;background:#ecf5ee}
+.note-source-row.unavailable{cursor:not-allowed;opacity:.68}
+.note-source-row input{appearance:none;flex:none;width:20px;height:20px;margin:2px 0 0;border:1.5px solid #8caeab;border-radius:5px;background:#fff;cursor:pointer}
+.note-source-row input:checked{border-color:#1d655e;background:#1d655e}
+.note-source-row input:checked:after{content:"✓";display:block;color:#fff;text-align:center;font:bold 14px/18px "Microsoft YaHei UI",sans-serif}
+.note-source-row input:disabled{cursor:not-allowed}
+.note-source-row-body{display:grid;flex:1;min-width:0;gap:5px}
+.note-source-row-body strong{overflow-wrap:anywhere;font-size:14px;line-height:1.45}
+.note-source-row-body>span{color:#71858d;font-size:11px;line-height:1.6}
+.note-source-row-body em{color:#a3533f;font-size:11px;font-style:normal}
+.note-source-status{flex:none;margin-top:1px;padding:4px 7px;border-radius:5px;background:#e5f1e8;color:#3c785d;font-size:11px}
+.note-source-status.failed{background:#f9e9e5;color:#a3533f}
+.note-source-status.queued,.note-source-status.running{background:#edf0f2;color:#617987}
+.note-source-state{margin:8px;padding:26px 14px;border-radius:8px;background:#f6f8f5;color:#637985;text-align:center;font-size:13px}
+.note-source-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 28px;border-top:1px solid #e3e9e5;background:#fffefa;color:#6b7e86;font-size:12px}
+.note-source-footer>div{display:flex;gap:9px}
+.note-source-footer button{min-height:38px;padding:8px 15px;border-radius:6px;font-size:13px;font-weight:700}
+.note-source-cancel{border:1px solid #cbd8d6;background:#fffefa;color:#355a69}
+.note-source-confirm{border:1px solid #123c5c;background:#123c5c;color:#fff}
+.note-source-confirm:disabled{border-color:#c4d0d3;background:#c4d0d3;cursor:not-allowed}
+.note-config-files{display:flex;flex-wrap:wrap;gap:6px}
+.note-config-files span{max-width:100%;overflow:hidden;padding:6px 9px;border-radius:5px;background:#e8f1ed;color:#24596b;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+@media(max-width:650px){.note-source-backdrop{padding:0}.note-source-dialog{width:100%;height:100dvh;max-height:none;border:0;border-radius:0}.note-source-head{padding:18px 19px 15px}.note-upload-panel{padding:12px 19px}.note-upload-details{grid-template-columns:1fr 1fr}.note-upload-details>button{grid-column:1/-1}.note-source-tools{padding:14px 19px}.note-source-list{padding:7px 10px;flex:1}.note-source-footer{padding:13px 18px}.note-source-row{gap:10px;padding:12px 9px}.note-source-status{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.note-source-row{transition:none}}
+.note-dialog-backdrop{position:fixed;z-index:10010;inset:0;display:grid;place-items:center;padding:24px;background:#102a3c91;backdrop-filter:blur(2px)}
+.note-dialog{display:flex;flex-direction:column;width:min(760px,100%);max-height:min(760px,92dvh);overflow:visible;border:1px solid #d7e3de;border-radius:14px;background:#fffefa;color:#193650;box-shadow:0 25px 70px #09263855}
+.note-dialog-head{display:flex;justify-content:space-between;gap:20px;padding:23px 27px 17px;border-bottom:1px solid #e3e9e5;background:linear-gradient(120deg,#f1f7f2,#fffefa);border-radius:14px 14px 0 0}
+.note-dialog-head small{color:#9a644f;font-size:11px;font-weight:700;letter-spacing:.08em}
+.note-dialog-head h2{margin:5px 0 5px;font:600 27px Georgia,"Songti SC",serif}
+.note-dialog-head p{margin:0;color:#617987;font-size:13px}
+.note-dialog-close{align-self:start;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:#607785;font-size:24px}
+.note-dialog-close:hover{background:#e4eee8}
+.note-dialog-body{display:grid;align-content:start;gap:17px;min-height:0;overflow-y:auto;padding:21px 27px 24px;overscroll-behavior:contain}
+.note-dialog-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.note-dialog label,.note-type-field{display:grid;align-content:start;gap:7px;color:#506a75;font-size:12px;font-weight:700}
+.note-dialog input,.note-dialog textarea,.note-type-trigger{width:100%;min-height:43px;padding:9px 12px;border:1px solid #b8cbc5;border-radius:7px;background:#fffefa;color:#193650;font:14px "Microsoft YaHei UI","PingFang SC",sans-serif}
+.note-dialog textarea{min-height:105px;resize:vertical;line-height:1.6}
+.note-dialog button:focus-visible,.note-dialog input:focus-visible,.note-dialog textarea:focus-visible{outline:2px solid #4b8295;outline-offset:2px}
+.note-type-field{position:relative}
+.note-type-trigger{display:flex;align-items:center;justify-content:space-between;text-align:left;cursor:pointer}
+.note-type-trigger[aria-expanded="true"]{border-color:#6e9a9b;background:#f6fbf7}
+.note-type-trigger>span:last-child{color:#517688;font-size:19px;line-height:1}
+.note-type-menu{position:absolute;z-index:5;top:calc(100% + 7px);left:0;right:0;display:grid;gap:3px;padding:6px;border:1px solid #cadbd3;border-radius:9px;background:#fffefa;box-shadow:0 15px 34px #10384d30}
+.note-type-menu button{position:relative;display:grid;gap:2px;width:100%;min-height:51px;padding:8px 34px 8px 12px;border:0;border-radius:6px;background:transparent;color:#23465a;text-align:left}
+.note-type-menu button:hover,.note-type-menu button:focus-visible{background:#eef5ef}
+.note-type-menu button[aria-selected="true"]{background:#e2f0e8;color:#174f56}
+.note-type-menu strong{font-size:13px}
+.note-type-menu small{color:#738891;font-size:11px;font-weight:400}
+.note-type-menu button>span{position:absolute;top:15px;right:12px;color:#286b61;font-size:14px}
+.note-dialog-source{display:grid;gap:10px;padding:14px;border:1px solid #d7e5dd;border-radius:8px;background:#f8fbf7}
+.note-dialog-source-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.note-dialog-source-head strong{font-size:13px}
+.note-dialog-source-head button{padding:7px 10px;border:1px solid #a9c8bf;border-radius:6px;background:#edf6ef;color:#1b605c;font-size:12px;font-weight:700}
+.note-dialog-source>small{color:#8b6b58;font-size:11px}
+.note-dialog-warning,.note-dialog-error{margin:0;padding:10px 12px;border-radius:6px;background:#fff2e9;color:#96543a;font-size:12px;line-height:1.6}
+.note-dialog-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 27px;border-top:1px solid #e3e9e5;border-radius:0 0 14px 14px;background:#fffefa}
+.note-dialog-footer p{margin:0;color:#72858a;font-size:11px}
+.note-dialog-footer>div{display:flex;gap:9px}
+.note-dialog-footer button{min-height:40px;padding:9px 15px;border-radius:6px;font-size:13px;font-weight:700}
+.note-dialog-cancel{border:1px solid #cbd8d6;background:#fffefa;color:#355a69}
+.note-dialog-submit{border:1px solid #123c5c;background:#123c5c;color:#fff}
+.note-dialog-submit:disabled{border-color:#a9bac0;background:#a9bac0;cursor:not-allowed}
+@media(max-width:650px){.note-dialog-backdrop{padding:0}.note-dialog{width:100%;height:100dvh;max-height:none;border:0;border-radius:0}.note-dialog-head{padding:18px 19px 15px;border-radius:0}.note-dialog-body{flex:1;padding:18px 19px}.note-dialog-grid{grid-template-columns:1fr}.note-dialog-footer{align-items:stretch;flex-direction:column;padding:13px 19px;border-radius:0}.note-dialog-footer>div{width:100%}.note-dialog-footer button{flex:1}}
+
+.quiz-config-dialog .note-dialog-source-head>span,.quiz-config-hint{font-size:12px;color:#617987}.quiz-config-hint{margin:0;line-height:1.7}.quiz-config-dialog .quiz-count-error{color:#96543a}

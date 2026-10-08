@@ -12,8 +12,21 @@ class Store(Protocol):
     def put(self, table: str, key: str, data: dict) -> None: ...
     def get(self, table: str, key: str) -> dict | None: ...
     def scan(self, table: str, filters: dict) -> list[dict]: ...
+    def delete(self, table: str, key: str) -> None: ...
+    def delete_document(self, key: str) -> None: ...
+    def deindex_document(self, key: str) -> None: ...
+    def update_material_metadata(self, key: str, changes: dict) -> dict | None: ...
     def ingest(self, document: dict, chunks: list[dict]) -> None: ...
-    def search(self, vector: list[float], course: str, chapter: str, limit: int) -> list[dict]: ...
+    def search(
+        self,
+        vector: list[float],
+        course: str,
+        chapter: str,
+        limit: int,
+        document_ids: list[str] | None = None,
+    ) -> list[dict]: ...
+    def list_material_chunks(self, document_id: str) -> list[dict]: ...
+    def ensure_material_source(self, document: dict) -> dict: ...
 
 
 def stable_key(*parts: str) -> str:
@@ -26,12 +39,30 @@ class StorageError(RuntimeError):
 
 class SurrealStore:
     TABLES = {
+        "course",
+        "export_job",
         "document",
         "chunk",
+        "conversation",
+        "message",
         "review_session",
         "knowledge_point",
         "checkpoint",
         "pending_write",
+        "attempt",
+        "learning_event",
+        "fast_quiz_session",
+        "exam",
+        "learning_asset",
+        "asset_revision",
+        "quiz_revision_payload",
+        "question_revision",
+        "material_version",
+        "source_reference",
+        "source_locator",
+        "source_snapshot",
+        "confirmation",
+        "audit_event",
     }
 
     def __init__(self, settings: Settings):
@@ -122,15 +153,88 @@ class SurrealStore:
 
     def scan(self, table, filters):
         table = self._table(table)
-        allowed = {"thread_id", "checkpoint_ns", "checkpoint_id", "course_id"}
+        allowed = {
+            "thread_id",
+            "checkpoint_ns",
+            "checkpoint_id",
+            "course_id",
+            "conversation_id",
+            "document_id",
+        }
         if not filters.keys() <= allowed:
             raise ValueError("不支持的查询字段")
         where = " AND ".join(f"{k} = ${k}" for k in filters) or "true"
-        return self.query(f"SELECT * OMIT id FROM {table} WHERE {where};", filters)[0]
+        order = " ORDER BY created_at ASC" if table == "message" else ""
+        return self.query(f"SELECT * OMIT id FROM {table} WHERE {where}{order};", filters)[0]
+
+    def delete(self, table, key):
+        self._table(table)
+        self.query("DELETE type::thing($table, $key);", {"table": table, "key": key})
+
+    def delete_document(self, key):
+        self.query(
+            "BEGIN TRANSACTION; DELETE chunk WHERE document_id = $key; "
+            "DELETE type::thing('document', $key); COMMIT TRANSACTION;",
+            {"key": key},
+        )
+
+    def deindex_document(self, key):
+        """Remove retrieval chunks while retaining the document provenance record."""
+        self.query("DELETE chunk WHERE document_id = $key;", {"key": key})
+
+    def list_material_chunks(self, document_id):
+        chunks = self.scan("chunk", {"document_id": document_id})
+        return sorted(
+            chunks, key=lambda chunk: (chunk.get("chunk_ordinal", 2**31), chunk["chunk_id"])
+        )
+
+    def ensure_material_source(self, document):
+        from .source_locators import chunk_locator, material_version
+
+        version = material_version(document)
+        if not self.get("material_version", version["material_version_id"]):
+            self.put("material_version", version["material_version_id"], version)
+        for ordinal, chunk in enumerate(self.list_material_chunks(document["document_id"])):
+            locator = chunk_locator(version, chunk, ordinal)
+            self.put("source_locator", locator["locator_id"], locator)
+        return version
+
+    def update_material_metadata(self, key, changes):
+        from datetime import UTC, datetime
+
+        document = self.get("document", key)
+        if (
+            document is None
+            or document.get("parse_status") not in {"ready", "failed"}
+            or document.get("updated_at") != changes["expected_updated_at"]
+        ):
+            return None
+        for field in ("title", "chapter", "source_type"):
+            document[field] = changes[field]
+        document["updated_at"] = datetime.now(UTC).isoformat()
+        self.query(
+            "BEGIN TRANSACTION; "
+            "UPSERT type::thing('document', $key) CONTENT $document; "
+            "UPDATE chunk SET title=$title, chapter=$chapter, source_type=$source_type "
+            "WHERE document_id=$key; COMMIT TRANSACTION;",
+            {
+                "key": key,
+                "document": document,
+                "title": document["title"],
+                "chapter": document["chapter"],
+                "source_type": document["source_type"],
+            },
+        )
+        return document
 
     def ingest(self, document, chunks):
         # Single transaction prevents incomplete documents from entering retrieval.
         # Data payload is sent in a JSON-bound variable, not interpolated as SQL.
+        if "user_id" in document:
+            from .source_locators import material_version
+
+            document = {**document, "parse_status": document.get("parse_status", "ready")}
+            document["material_version_id"] = material_version(document)["material_version_id"]
         self.query(
             "BEGIN TRANSACTION;"
             "UPSERT type::thing('document', $key) CONTENT $document;"
@@ -139,15 +243,25 @@ class SurrealStore:
             "COMMIT TRANSACTION;",
             {"key": document["document_id"], "document": document, "chunks": chunks},
         )
+        if "user_id" in document:
+            self.ensure_material_source(document)
 
-    def search(self, vector, course, chapter, limit):
+    def search(self, vector, course, chapter, limit, document_ids=None):
         # Exact cosine search over the filtered course, suitable for a small course corpus.
         # No global TopK-before-filter bug; HNSW is a future scaling choice, not a claim here.
         rows = self.query(
             "SELECT chunk_id, document_id, title, course_id, chapter, source_type, content, "
             "vector::similarity::cosine(embedding, $vector) AS similarity "
             "FROM chunk WHERE course_id = $course AND ($chapter = '' OR chapter = $chapter) "
+            "AND ($all_documents OR document_id IN $document_ids) "
             "ORDER BY similarity DESC LIMIT $limit;",
-            {"vector": vector, "course": course, "chapter": chapter, "limit": limit},
+            {
+                "vector": vector,
+                "course": course,
+                "chapter": chapter,
+                "limit": limit,
+                "all_documents": document_ids is None,
+                "document_ids": document_ids or [],
+            },
         )[0]
         return rows

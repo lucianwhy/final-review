@@ -1,32 +1,105 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { ConfigProvider } from "antd";
+import zhCN from "antd/locale/zh_CN";
 import "./styles.css";
+import Workbench from "./Workbench";
+import Materials from "./Materials";
+import Notes from "./Notes";
+import Topbar from "./Topbar";
+import ChatHome from "./ChatHome";
+import QuizDrafts from "./QuizDrafts";
+import { api, type Course } from "./workbench-api";
+import CourseSwitcher from "./CourseSwitcher";
+import NavigationIcon, { type NavigationIconName } from "./NavigationIcon";
 
-type Page = "home" | "materials" | "quiz" | "report";
-const navigation: [Page, string, string][] = [["home", "▢", "AI 对话"], ["materials", "▱", "我的资料"], ["quiz", "✎", "模拟测验"], ["report", "▥", "学习报告"]];
-const sourceRows = [["2024 期末卷 · 需求工程", "历年真题", "第 3 章", "PDF · 2.4 MB"], ["第 3 章 · 需求分析", "老师 PPT", "第 3 章", "PPT · 18.7 MB"], ["课后作业 02 · 用例建模", "平时作业", "第 2 章", "PDF · 1.2 MB"], ["2023 期末卷 · 软件设计", "历年真题", "第 4 章", "PDF · 3.1 MB"]];
-
+type Page = "home" | "workbench" | "materials" | "notes" | "quiz" | "report";
+const navigation: [Page, NavigationIconName, string][] = [["home", "chat", "AI 对话"], ["workbench", "courses", "课程管理"], ["materials", "materials", "我的资料"], ["notes", "notes", "我的笔记"], ["quiz", "quiz", "模拟测验"], ["report", "report", "学习报告"]];
 function App() {
-  const [page, setPage] = useState<Page>("home");
-  return <div className="shell"><aside><div className="brand"><span>✦</span><div><b>考前笔记</b><small>让努力，更有方向。</small></div></div><div className="course"><small>当前课程</small><strong>软件工程基础</strong><em>⌄</em></div><nav>{navigation.map(([id, icon, text]) => <button className={page === id ? "active" : ""} onClick={() => setPage(id)} key={id}><i>{icon}</i>{text}</button>)}</nav><p className="quote">复习不是把资料看完，<br />是把会考的写出来。</p><small className="sign">— 考前笔记</small></aside><main className={page === "home" ? "dialog-main" : ""}>{page !== "home" && <Topbar />}{page === "home" && <Home />}{page === "materials" && <Materials />}{page === "quiz" && <Quiz />}{page === "report" && <Report />}</main></div>;
+  const [page, setPage] = useState<Page>(/^#materials(?:\/|$)/.test(window.location.hash) ? "materials" : /^#note\//.test(window.location.hash) || window.location.hash === "#notes" ? "notes" : /^#chat\//.test(window.location.hash) ? "home" : "workbench");
+  const [routeHash, setRouteHash] = useState(window.location.hash);
+  const acceptedHash = useRef(window.location.hash);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [courseReady, setCourseReady] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(() => /^#chat\/[^/]+\/([^/]+)$/.exec(window.location.hash)?.[1] ?? null);
+  const [chatKey, setChatKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    let active = true;
+    api<{ items: Course[] }>("/api/courses").then(data => {
+      if (!active) return;
+      setCourses(data.items);
+      const linked = /^#chat\/([^/]+)/.exec(window.location.hash)?.[1] ?? (/^#materials\/([^/]+)/.exec(window.location.hash)?.[1] ?? "");
+      const stored = localStorage.getItem("current-course-id");
+      const chosen = data.items.find(item => item.course_id === linked && item.status !== "deleted")
+        ?? data.items.find(item => item.course_id === stored && item.status !== "deleted")
+        ?? data.items.find(item => item.status === "active") ?? data.items.find(item => item.status === "archived") ?? null;
+      setCourse(chosen);
+      if (chosen) localStorage.setItem("current-course-id", chosen.course_id);
+      else localStorage.removeItem("current-course-id");
+      if (chosen && !window.location.hash.startsWith("#chat/")) setConversationId(localStorage.getItem(`current-conversation-${chosen.course_id}`));
+      setCourseReady(true);
+      if (linked && chosen?.course_id !== linked && window.location.hash.startsWith("#chat/")) { setConversationId(null); window.location.hash = chosen ? `#chat/${chosen.course_id}` : ""; }
+    }).catch(() => { if (active) { setCourses([]); setCourseReady(true); } });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    const onHashChange = (event: HashChangeEvent) => {
+      if (window.location.hash === acceptedHash.current) return;
+      if (!window.dispatchEvent(new Event("note-navigation", { cancelable: true }))) { event.stopImmediatePropagation(); window.history.replaceState(null, "", acceptedHash.current); return; }
+      acceptedHash.current = window.location.hash;
+      setRouteHash(window.location.hash);
+      const hash = window.location.hash;
+      if (/^#materials(?:\/|$)/.test(hash)) setPage("materials");
+      else if (hash.startsWith("#note/") || hash === "#notes") setPage("notes");
+      else if (hash.startsWith("#chat/")) {
+        setPage("home");
+        const match = /^#chat\/([^/]+)(?:\/([^/]+))?$/.exec(hash);
+        if (match) { setConversationId(match[2] ?? null); const linked = courses.find(item => item.course_id === match[1] && item.status !== "deleted"); if (linked) { setCourse(linked); localStorage.setItem("current-course-id", linked.course_id); if (match[2]) localStorage.setItem(`current-conversation-${linked.course_id}`, match[2]); } }
+      } else { const target = hash.slice(1) as Page; setPage(["workbench", "quiz", "report", "home"].includes(target) ? target : "workbench"); }
+    };
+    window.addEventListener("hashchange", onHashChange, true);
+    return () => window.removeEventListener("hashchange", onHashChange, true);
+  }, [courses]);
+  const onSelectCourse = useCallback((value: Course | null) => {
+    if (course?.course_id !== value?.course_id) { setConversationId(value ? localStorage.getItem(`current-conversation-${value.course_id}`) : null); setChatKey(key => key + 1); }
+    setCourse(value);
+    if (value) setCourses(items => [...items.filter(item => item.course_id !== value.course_id), value]);
+    void api<{ items: Course[] }>("/api/courses").then(data => setCourses(data.items)).catch(() => {});
+    if (value && value.status !== "deleted") localStorage.setItem("current-course-id", value.course_id);
+  }, [course?.course_id]);
+  const selectCourse = (value: Course) => {
+    if (!window.dispatchEvent(new Event("note-navigation", { cancelable: true }))) return;
+    onSelectCourse(value);
+    if (page === "notes") window.location.hash = "#notes";
+    if (page === "home") { const remembered = localStorage.getItem(`current-conversation-${value.course_id}`); window.location.hash = `#chat/${value.course_id}${remembered ? `/${remembered}` : ""}`; }
+    if (page === "materials" && window.location.hash.startsWith("#materials/")) window.location.hash = "#materials";
+  };
+  const selectConversation = (id: string) => {
+    if (!window.dispatchEvent(new Event("note-navigation", { cancelable: true }))) return;
+    if (!course) return;
+    localStorage.setItem(`current-conversation-${course.course_id}`, id);
+    setConversationId(id); setPage("home"); window.location.hash = `#chat/${course.course_id}/${id}`;
+  };
+  const newConversation = () => {
+    if (!window.dispatchEvent(new Event("note-navigation", { cancelable: true }))) return;
+    setConversationId(null); setChatKey(key => key + 1); setPage("home");
+    if (course) { localStorage.removeItem(`current-conversation-${course.course_id}`); window.location.hash = `#chat/${course.course_id}`; }
+  };
+  const navigate = (id: Page) => { if (id === "home" && course) window.location.hash = `#chat/${course.course_id}${conversationId ? `/${conversationId}` : ""}`; else if (id !== "home") window.location.hash = `#${id}`; };
+  return <div className="shell"><aside><CourseSwitcher courses={courses} course={course} conversationId={conversationId} onCourse={selectCourse} onConversation={selectConversation} onNew={newConversation} onRenamed={() => setRefreshKey(key => key + 1)} refreshKey={refreshKey}/><nav>{navigation.map(([id, icon, text]) => <button className={page === id ? "active" : ""} onClick={() => navigate(id)} key={id}><NavigationIcon name={icon} />{text}</button>)}</nav><p className="quote">复习不是把资料看完，<br />是把会考的写出来。</p><small className="sign">— 考前笔记</small></aside><main className={page === "home" ? "dialog-main" : ""}>{page !== "home" && !(page === "notes" && /^#note\//.test(routeHash)) && <Topbar />}{page === "home" && <ChatHome key={`${course?.course_id}-${chatKey}`} courseId={course?.status === "deleted" ? null : course?.course_id ?? null} selectedConversationId={conversationId} titleRefreshKey={refreshKey} onConversationRenamed={() => setRefreshKey(key => key + 1)} onConversationCreated={id => { setConversationId(id); setRefreshKey(key => key + 1); if (course) localStorage.setItem(`current-conversation-${course.course_id}`, id); if (course) window.location.hash = `#chat/${course.course_id}/${id}`; }} onNewConversation={newConversation} />}{page === "workbench" && courseReady && <Workbench selectedId={course?.course_id ?? null} onSelect={onSelectCourse} />}{page === "materials" && <Materials selectedCourse={course} />}{page === "notes" && courseReady && <Notes hash={routeHash} course={course} onCourseResolved={id => { const linked = courses.find(item => item.course_id === id); if (linked && linked.course_id !== course?.course_id) { setCourse(linked); localStorage.setItem("current-course-id", linked.course_id); } }} />}{page === "quiz" && <QuizDrafts courseId={course?.status === "deleted" ? null : course?.course_id ?? null} />}{page === "report" && <Report />}</main><div className="mobile-course"><CourseSwitcher courses={courses} course={course} conversationId={conversationId} onCourse={selectCourse} onConversation={selectConversation} onNew={newConversation} onRenamed={() => setRefreshKey(key => key + 1)} refreshKey={refreshKey}/></div><div className="mobile-nav">{navigation.map(([id, icon, text]) => <button className={page === id ? "active" : ""} key={id} onClick={() => navigate(id)}><NavigationIcon name={icon} />{text}</button>)}</div></div>;
 }
-function Topbar(){return <header className="top"><span>2024 年 12 月 10 日　星期二　 <b>距考试 12 天</b></span><span>♧　◯　同学　⌄</span></header>}
 function Box({children,className=""}:{children:React.ReactNode,className?:string}){return <section className={"box "+className}>{children}</section>}
 function Tag({children,tone="green"}:{children:React.ReactNode,tone?:string}){return <span className={"tag "+tone}>{children}</span>}
 function Hero({title,sub,action}:{title:React.ReactNode,sub:string,action?:string}){return <div className="hero"><div><h1>{title}</h1><p>{sub}</p></div>{action&&<button className="primary">{action}</button>}</div>}
 
-type ChatMsg = {from:"agent"|"user"; text:string; citations?:{title:string;content:string;similarity:number}[]; status?:string};
-
-function Home(){
- const [messages,setMessages]=useState<ChatMsg[]>([]); const [draft,setDraft]=useState(""); const [isSending,setIsSending]=useState(false); const [courseId,setCourseId]=useState("default"); const [sessionId,setSessionId]=useState("chat-"+Date.now()); const messagesRef=useRef<HTMLDivElement>(null);
- useEffect(()=>{const container=messagesRef.current;if(container)container.scrollTo({top:container.scrollHeight,behavior:"smooth"})},[messages]);
- const send=async(value=draft)=>{const message=value.trim();if(!message||isSending)return;setMessages(prev=>[...prev,{from:"user",text:message}]);setDraft("");setIsSending(true);try{const response=await fetch("/api/agent/invoke",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({course_id:courseId,session_id:sessionId,message,intent:"ask"})});const body=await response.json();if(!response.ok)throw new Error(body.detail||"请求失败");const citations=body.citations?.map((c:{title:string;content:string;similarity:number})=>({title:c.title,content:c.content,similarity:c.similarity}))||[];let replyText=body.answer||"";if(body.status==="needs_input"){replyText=replyText||"需要补充信息，请提供更多细节。"}else if(body.status==="awaiting_answers"){replyText=replyText||"请提交你的答案。"}else if(body.status==="insufficient_evidence"){replyText=replyText||"资料库中未找到相关内容，请先上传课程资料。"}setMessages(prev=>[...prev,{from:"agent",text:replyText,citations:citations.length?citations:undefined,status:body.status}])}catch(error){const detail=error instanceof Error?error.message:"请求失败";setMessages(prev=>[...prev,{from:"agent",text:`暂时无法回答：${detail}。请检查后端服务和模型配置后重试。`}])}finally{setIsSending(false)}};
- return <div className="dialog-page"><Box className="chat"><header><div><h2>AI 对话</h2><small style={{opacity:0.5,fontSize:"0.75rem"}}>课程：{courseId}　会话：{sessionId}</small></div><button aria-label="更多对话操作">•••</button></header><div className="messages" ref={messagesRef}>{messages.length === 0 && <div className="empty-chat"><i>✦</i><h1>今天想从哪里开始？</h1><p>可以让我整理重点、解析难题，或根据你的课程资料出一组练习题。</p><div style={{display:"flex",gap:"0.5rem",marginTop:"0.75rem",fontSize:"0.8rem"}}><input value={courseId} onChange={e=>setCourseId(e.target.value)} placeholder="课程 ID" style={{padding:"0.3rem 0.5rem",borderRadius:"6px",border:"1px solid var(--border)",background:"var(--card)",color:"var(--foreground)",width:"120px"}}/><input value={sessionId} onChange={e=>setSessionId(e.target.value)} placeholder="会话 ID" style={{padding:"0.3rem 0.5rem",borderRadius:"6px",border:"1px solid var(--border)",background:"var(--card)",color:"var(--foreground)",width:"160px"}}/></div></div>}{messages.map((m,i)=><article className={"message "+m.from} key={i}><i aria-hidden="true">{m.from==="agent"?"✦":"你"}</i><div><label>{m.from==="agent"?"助手":"你"}</label><p>{m.text}</p>{m.citations&&m.citations.length>0&&<details className="citations"><summary>📎 引用来源（{m.citations.length}）</summary><ul>{m.citations.map((c,j)=><li key={j}><b>{c.title}</b><small>相似度 {(c.similarity*100).toFixed(0)}%</small><p>{c.content.length>200?c.content.slice(0,200)+"…":c.content}</p></li>)}</ul></details>}{m.status&&m.status!=="completed"&&<small className="tag" style={{fontSize:"0.7rem",opacity:0.7}}>状态：{m.status}</small>}</div></article>)}</div><div className="composer"><textarea disabled={isSending} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}}} placeholder={isSending?"助手正在思考……":"输入你的问题，或让 AI 帮你制定学习计划、解析难题、生成练习题……"}/><div><button className="model" type="button">✦　Agent　⌄</button><button className="send" disabled={isSending} onClick={()=>send()} aria-label="发送消息">{isSending?"…":"➤"}</button></div></div><footer className="quick"><span>试试这样问：</span>{["制定今天的复习计划","出 10 道需求分析题","总结第 3 章重点"].map(text=><button disabled={isSending} key={text} onClick={()=>send(text)}>{text}</button>)}</footer></Box></div>
-}
 function RouteMap(){const data=[["✓","用例建模","掌握良好，正确率 82%","82 分","green"],["","需求分析","正在练习，正确率 60%","60%","gold"],["","需求规格说明书","薄弱环节，正确率 38%","38%","red"]];return <Box className="route"><h2>你的得分路线图 <small>基于最近三次模拟测验</small></h2>{data.map((r,i)=><article key={r[1]}><i className={r[4]}>{r[0]}</i><div><b>{r[1]}</b><p>{r[2]}</p></div><strong className={r[4]}>{r[3]}</strong><Tag tone={r[4]}>{i===0?"已掌握":i===1?"进行中":"优先复习"}</Tag></article>)}</Box>}
-function Materials(){return <div><Hero title="我的复习资料" sub="把课程材料整理好，复习路线才有依据。" action="添加复习资料　＋"/><Box className="stats">{[["▧","共 12 份资料"],["▰","已覆盖 8 个章节"],["▱","历年真题 3 份"],["▣","老师 PPT 5 份"]].map(x=><p key={x[1]}><i>{x[0]}</i><b>{x[1]}</b><small>持续丰富中</small></p>)}</Box><div className="tools"><input placeholder="⌕　搜索资料名称或章节"/>{["全部","历年真题","老师 PPT","平时作业","速成课"].map((x,i)=><button className={i===0?"chosen":""} key={x}>{x}</button>)}</div><div className="materials-grid"><Box className="table"><header><span>资料名称</span><span>来源</span><span>所属章节</span><span>格式 / 大小</span></header>{sourceRows.map((r,i)=><p key={r[0]}><b>▣　{r[0]}</b><Tag tone={i%2?"blue":"red"}>{r[1]}</Tag><span>{r[2]}</span><span>{r[3]}　•••</span></p>)}</Box><Coverage/></div></div>}
-function Coverage(){return <Box className="coverage"><h2>资料覆盖情况</h2>{["绪论","需求工程","需求分析","软件设计","软件实现","系统测试"].map((x,i)=><p key={x}><i>{i+1}</i>{x}<span><b style={{width:(100-i*13)+"%"}}/></span>{i<3?"3/3":"1/3"}</p>)}<button>＋<br/><b>拖入资料，或点击上传</b><small>支持 PPT、PDF、Word、Markdown</small></button></Box>}
-function Quiz(){const [types,setTypes]=useState(["单选题","简答题"]);const toggle=(x:string)=>setTypes(types.includes(x)?types.filter(t=>t!==x):[...types,x]);return <div><Hero title={<>开始一场<em>有针对性</em>的练习。</>} sub="题目会优先参考历年真题和老师 PPT，并针对薄弱点加练。"/><div className="quiz-grid"><Box className="config"><h2>创建本次测验</h2><label>选择复习章节<select><option>第 3 章 · 需求分析</option></select></label><label>选择题型（可多选）</label><div>{["单选题","多选题","填空题","简答题"].map(x=><button className={types.includes(x)?"chosen":""} key={x} onClick={()=>toggle(x)}>{types.includes(x)?"☑":"□"}　{x}</button>)}</div><label>题目数量</label><div><button>5 题</button><button className="chosen">10 题</button><button>15 题</button></div><p>◉　限时模拟　　○　自由练习 <strong>约 25 分钟</strong></p><button className="primary full">生成测验　→</button></Box><Box className="dark"><RouteMap/></Box></div><Records/></div>}
+
 function Records(){return <Box className="records"><h2>最近测验记录</h2>{[["12 月 8 日","需求建模专项","10 题","82 分"],["12 月 5 日","第 3 章 · 需求分析","15 题","60 分"],["12 月 1 日","软件设计基础","10 题","38 分"]].map(r=><p key={r[0]}>{r.map(x=><span key={x}>{x}</span>)}<a>查看解析　›</a></p>)}</Box>}
 function Report(){return <div><Hero title={<>你的复习，正在变得<em>更有把握。</em></>} sub="基于近三次模拟测验与本周完成的复习任务。" action="▣　近 7 天　⌄"/><div className="report-stats">{[["▧","累计练习","38 题"],["◎","平均正确率","68%"],["▰","已完成章节","5 / 8"]].map(x=><Box key={x[1]}><i>{x[0]}</i><small>{x[1]}</small><b>{x[2]}</b><p>较上周 <em>+12 ↗</em></p></Box>)}</div><div className="report-grid"><Box className="trend"><h2>得分趋势</h2><div className="chart"><i/><i/><i/><i/></div><p>▥　较上周提升 <strong>12 分</strong></p></Box><RouteMap/><Box className="weak"><h2>薄弱知识点</h2>{[["可验证性","38%"],["需求获取方法","52%"],["一致性与完整性","58%"]].map(x=><article key={x[0]}><b>{x[0]}</b><strong>{x[1]}</strong><p>建议完成 1 组简答题</p><button>开始练习　→</button></article>)}</Box></div></div>}
-createRoot(document.getElementById("root")!).render(<App/>);
+createRoot(document.getElementById("root")!).render(
+  <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: "#123c5c", borderRadius: 6, fontFamily: '"Microsoft YaHei UI", "PingFang SC", sans-serif' } }}>
+    <App />
+  </ConfigProvider>,
+);

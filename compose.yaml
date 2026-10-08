@@ -1,21 +1,81 @@
 services:
-  surrealdb:
-    image: surrealdb/surrealdb:v2.3.10
-    user: root
-    command: start --bind 0.0.0.0:8000 --user ${SURREAL_USERNAME:-root} --pass ${SURREAL_PASSWORD:?Set SURREAL_PASSWORD in .env} rocksdb:/data/review.db
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: final_review
+      POSTGRES_USER: final_review
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:5432:5432"
     volumes:
-      - surreal-data:/data
+      - postgres-data:/var/lib/postgresql/data
   agent:
     build: .
     env_file: .env
     environment:
-      SURREAL_URL: http://surrealdb:8000
+      DATABASE_URL: postgresql://final_review:${POSTGRES_PASSWORD}@postgres:5432/final_review
+      EXPORTS_DIR: /app/exports
     ports:
       - "127.0.0.1:8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./exports:/app/exports
     depends_on:
-      - surrealdb
+      postgres:
+        condition: service_started
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+  material-worker:
+    build: .
+    command: ["uv", "run", "--no-sync", "python", "-m", "final_review.material_jobs"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://final_review:${POSTGRES_PASSWORD}@postgres:5432/final_review
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      agent:
+        condition: service_healthy
+    restart: on-failure:3
+  note-worker:
+    build: .
+    command: ["uv", "run", "--no-sync", "python", "-m", "final_review.note_jobs"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://final_review:${POSTGRES_PASSWORD}@postgres:5432/final_review
+    depends_on:
+      agent:
+        condition: service_healthy
+    restart: on-failure:3
+  quiz-worker:
+    build: .
+    command: ["uv", "run", "--no-sync", "python", "-m", "final_review.quiz_jobs"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://final_review:${POSTGRES_PASSWORD}@postgres:5432/final_review
+    depends_on:
+      agent:
+        condition: service_healthy
+    restart: on-failure:3
+  export-worker:
+    build: .
+    command: ["uv", "run", "--no-sync", "python", "-m", "final_review.export_jobs"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://final_review:${POSTGRES_PASSWORD}@postgres:5432/final_review
+      EXPORTS_DIR: /app/exports
+      EXPORT_CHROMIUM_EXECUTABLE: ""
+      EXPORT_PANDOC_EXECUTABLE: ""
+    volumes:
+      - ./exports:/app/exports
+    depends_on:
+      agent:
+        condition: service_healthy
     restart: on-failure:3
 volumes:
-  surreal-data:
+  postgres-data:

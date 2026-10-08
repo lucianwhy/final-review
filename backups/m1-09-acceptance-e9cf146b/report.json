@@ -1,0 +1,10 @@
+{
+  "database": "isolated disposable PostgreSQL",
+  "checks": [],
+  "vision_model": "qwen3-vl-plus",
+  "fixtures": "controlled real PPTX",
+  "status": "failed",
+  "failure_type": "AttributeError",
+  "database_removed": true,
+  "seconds": 1.11
+}

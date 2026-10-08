@@ -1,0 +1,2 @@
+usage: -c [-h] --document-id DOCUMENT_ID [--pages PAGES] [--publish]
+-c: error: Cannot publish an incomplete deck

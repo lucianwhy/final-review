@@ -11,6 +11,11 @@ jobs:
         with:
           version: "0.10.0"
       - run: uv sync --frozen --python 3.13
+      - name: Install export renderer and Chinese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-noto-core libreoffice-impress poppler-utils tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng
+          uv run playwright install --with-deps chromium
       - run: uv run ruff check src tests examples eval
       - run: uv run ruff format --check src tests examples eval
       - name: Start isolated database

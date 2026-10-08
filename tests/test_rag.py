@@ -16,6 +16,24 @@ def test_dedup_ingestion_avoids_embedding_cost(system):
     assert calls == system.kb.embeddings.document_calls
 
 
+def test_ingestion_respects_embedding_provider_batch_limit(system, monkeypatch):
+    texts = [f"part {index}" for index in range(23)]
+    monkeypatch.setattr(system.kb.splitter, "split_text", lambda _: texts)
+    batch_sizes = []
+    original = system.kb.embeddings.embed_documents
+
+    def embed(batch):
+        batch_sizes.append(len(batch))
+        return original(batch)
+
+    monkeypatch.setattr(system.kb.embeddings, "embed_documents", embed)
+    result = system.kb.ingest(
+        MaterialInput(course_id="net", title="long", source_type="homework", markdown="long")
+    )
+    assert batch_sizes == [10, 10, 3]
+    assert result["chunks"] == len(texts)
+
+
 def test_source_priority_and_course_chapter_filter(system):
     for source in ["past_exam", "homework", "crash_course", "ai_supplement"]:
         system.kb.ingest(

@@ -1,0 +1,175 @@
+{
+  "database": "isolated disposable PostgreSQL",
+  "checks": [
+    "owner registration",
+    "second user registration",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 --publish exit=2",
+    "partial publish leaves document unchanged",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 exit=0",
+    "preview candidate keeps old index",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --publish exit=0",
+    "navigation page excluded; image and mixed pages indexed",
+    "image facts, native code and image facts retained",
+    "all controlled pages verified",
+    "historical reference preserved outside active index",
+    "owner original page 1",
+    "other user page 1 denied",
+    "owner original page 2",
+    "other user page 2 denied",
+    "owner original page 3",
+    "other user page 3 denied",
+    "cross course original denied",
+    "missing original page denied",
+    "owner history reference readable",
+    "other user history denied",
+    "owner preview quality",
+    "embedding failure retains old version",
+    "SQL publication failure rolls back all writes",
+    "concurrent metadata edit fences publication",
+    "CLI scripts/rebuild_course_materials.py --course-id c25775fce92ef011d3f8 --workers 2 exit=0",
+    "course batch publishes legacy document",
+    "CLI scripts/rebuild_course_materials.py --course-id c25775fce92ef011d3f8 --workers 1 exit=1",
+    "course failure keeps old document and chunks"
+  ],
+  "vision_model": "qwen3-vl-plus",
+  "fixtures": "controlled real PPTX",
+  "conversion_replayed": false,
+  "pages": [
+    {
+      "kind": "navigation",
+      "title": "目录",
+      "blocks": [],
+      "issues": [],
+      "quality": "verified",
+      "position": 1
+    },
+    {
+      "kind": "knowledge",
+      "title": "HTTP 会话：图片知识页",
+      "blocks": [
+        {
+          "title": "Cookie 与 Session 存储位置对比",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b1",
+          "evidence": [
+            {
+              "quote": "Cookie 保存在客户端。\n\nSession 状态保存在服务端。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "HTTP 协议特性",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b2",
+          "evidence": [
+            {
+              "quote": "HTTP 是无状态协议。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        }
+      ],
+      "issues": [],
+      "quality": "verified",
+      "position": 2
+    },
+    {
+      "kind": "knowledge",
+      "title": "Servlet 请求处理",
+      "blocks": [
+        {
+          "title": "参数读取方法",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b1",
+          "evidence": [
+            {
+              "quote": "request.getParameter(\"name\") 读取参数。",
+              "origin": "native",
+              "source_id": "native-2"
+            },
+            {
+              "quote": "教师备注：参数名 name 区分大小写。",
+              "origin": "note",
+              "source_id": "note-1"
+            },
+            {
+              "quote": "request.getParameter(\"name\") 读取参数 。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "输出语句示例",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b2",
+          "evidence": [
+            {
+              "quote": "System.out.println(\"ok\");",
+              "origin": "native",
+              "source_id": "native-3"
+            },
+            {
+              "quote": "stem.out.printin(\"ok\");",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": [
+            "image-page 中 'stem.out.printin' 为 OCR 错误，实际图片中文字为 'System.out.println(\"ok\");'（见原图第三行），与 native-3 一致；候选已正确指出以 native-3 为准，不构成事实错误。"
+          ]
+        },
+        {
+          "title": "HTTP 响应状态码 404",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b3",
+          "evidence": [
+            {
+              "quote": "响应状态码 404 表示资源未找到。",
+              "origin": "native",
+              "source_id": "native-4"
+            },
+            {
+              "quote": "响应状态码 404 表示资源未找到 。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "GET 与 POST 方法用途",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b4",
+          "evidence": [
+            {
+              "quote": "GET\n\n于读取资源 ,POST\n\n于提交数据 。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        }
+      ],
+      "issues": [],
+      "quality": "verified",
+      "position": 3
+    }
+  ],
+  "cleaned_text": "Cookie 与 Session 存储位置对比\n\nCookie 保存在客户端。Session 状态保存在服务端。\n\nHTTP 协议特性\n\nHTTP 是无状态协议。\n\n参数读取方法\n\nrequest.getParameter(\"name\") 用于读取 HTTP 请求中的参数。参数名 \"name\" 区分大小写。\n\n输出语句示例\n\nSystem.out.println(\"ok\"); 是在服务器端控制台输出字符串 \"ok\" 的 Java 语句。\n\nHTTP 响应状态码 404\n\n响应状态码 404 表示客户端请求的资源未找到。\n\nGET 与 POST 方法用途\n\nGET 方法用于读取资源，POST 方法用于提交数据。",
+  "status": "passed",
+  "database_removed": true,
+  "seconds": 153.08
+}

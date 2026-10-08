@@ -1,0 +1,65 @@
+{
+  "job_id": "quiz-job-a844378c30ecdd52a0de62ff22d0089f",
+  "responses": [
+    {
+      "http_status": 200,
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 26716,
+        "completion_tokens": 916,
+        "total_tokens": 27632,
+        "prompt_tokens_details": {
+          "cached_tokens": 26496
+        },
+        "prompt_cache_hit_tokens": 26496,
+        "prompt_cache_miss_tokens": 220
+      },
+      "schema": "QuizDraftPlan",
+      "arguments_length": 2472
+    },
+    {
+      "http_status": 200,
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 28260,
+        "completion_tokens": 6842,
+        "total_tokens": 35102,
+        "prompt_tokens_details": {
+          "cached_tokens": 28032
+        },
+        "prompt_cache_hit_tokens": 28032,
+        "prompt_cache_miss_tokens": 228
+      },
+      "schema": "QuizDraftPayload",
+      "arguments_length": 16460
+    },
+    {
+      "http_status": 200,
+      "finish_reason": "tool_calls",
+      "usage": {
+        "prompt_tokens": 28260,
+        "completion_tokens": 6820,
+        "total_tokens": 35080,
+        "prompt_tokens_details": {
+          "cached_tokens": 28032
+        },
+        "prompt_cache_hit_tokens": 28032,
+        "prompt_cache_miss_tokens": 228
+      },
+      "schema": "QuizDraftPayload",
+      "arguments_length": 16487
+    }
+  ],
+  "runs": [
+    {
+      "run": 1,
+      "question_count": 15,
+      "elapsed": 22.83
+    },
+    {
+      "run": 2,
+      "question_count": 15,
+      "elapsed": 22.25
+    }
+  ]
+}

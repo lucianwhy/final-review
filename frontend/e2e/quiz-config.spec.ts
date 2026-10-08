@@ -1,0 +1,74 @@
+import { expect, test } from "@playwright/test";
+
+test("model-driven quiz dialog prefills, restores, validates, saves and cancels", async ({ page, request }) => {
+  const base = "http://127.0.0.1:8081";
+  await request.post(`${base}/test/reset`);
+  const course = await (await request.post(`${base}/api/courses`, { data: { name: "网络复习" } })).json();
+  await request.post(`${base}/knowledge/ingest`, { data: {
+    course_id: course.course_id, title: "TCP 讲义", chapter: "TCP", source_type: "teacher_ppt",
+    markdown: "TCP 三次握手同步双方初始序列号并确认双方收发能力。",
+  } });
+  await page.goto(`/#chat/${course.course_id}`);
+  const composer = page.getByRole("textbox", { name: "输入你的问题" });
+  await composer.fill("模拟试卷是什么意思？");
+  await page.getByRole("button", { name: "发送消息" }).click();
+  await expect(page.locator(".message.agent")).toContainText("可以继续聊天");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const message = "帮我测测TCP掌握得怎么样，8道选择题和2道简答，基础难度";
+  await composer.fill(message);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "发送消息" }).click();
+  const dialog = page.getByRole("dialog", { name: "补充试题要求" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("spinbutton", { name: "选择题", exact: true })).toHaveValue("8");
+  await expect(dialog.getByRole("spinbutton", { name: "简答题", exact: true })).toHaveValue("2");
+  await expect(dialog.getByRole("button", { name: "难度", exact: true })).toContainText("基础");
+  await expect(dialog.getByRole("button", { name: "确认试题配置" })).toBeDisabled();
+  await page.reload();
+  await expect(dialog.getByRole("spinbutton", { name: "选择题", exact: true })).toHaveValue("8");
+  await dialog.getByRole("button", { name: "难度", exact: true }).click();
+  await expect(dialog.getByRole("listbox", { name: "难度" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("listbox")).toHaveCount(0);
+  await page.screenshot({ path: "test-results/quiz-config-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({ path: "test-results/quiz-config-mobile.png" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const select = async (label: string, option: string) => {
+    await dialog.getByRole("button", { name: label, exact: true }).click();
+    await dialog.getByRole("option", { name: option, exact: true }).click();
+  };
+  await select("计时方式", "不限时");
+  await select("AI 补充题", "不允许");
+  await select("纳入导入题", "不纳入");
+  await dialog.getByRole("button", { name: "选择资料", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "选择生成依据" });
+  await expect(picker).toContainText("试题资料");
+  await expect(picker).toContainText("最多 100 份");
+  await picker.getByRole("checkbox", { name: /TCP 讲义/ }).check();
+  await picker.getByRole("button", { name: /确认选择/ }).click();
+  await expect(dialog.getByRole("spinbutton", { name: "选择题", exact: true })).toHaveValue("8");
+  await dialog.getByRole("spinbutton", { name: "选择题", exact: true }).fill("36");
+  await expect(dialog.getByRole("button", { name: "确认试题配置" })).toBeDisabled();
+  await dialog.getByRole("spinbutton", { name: "选择题", exact: true }).fill("8");
+  await dialog.getByRole("textbox", { name: "重点 · 可选" }).fill("握手");
+  await dialog.getByRole("textbox", { name: "排除内容 · 可选" }).fill("握手");
+  await dialog.getByRole("button", { name: "确认试题配置" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("冲突");
+  await dialog.getByRole("textbox", { name: "排除内容 · 可选" }).fill("");
+  await dialog.getByRole("button", { name: "确认试题配置" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText(/试卷配置已就绪/)).toBeVisible();
+  await expect(composer).toBeFocused();
+  await page.reload();
+  await expect(dialog).toHaveCount(0);
+  await composer.fill(message);
+  await page.getByRole("button", { name: "发送消息" }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await expect(dialog).toHaveCount(0);
+});
