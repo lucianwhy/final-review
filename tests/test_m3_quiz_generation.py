@@ -13,6 +13,7 @@ from test_m3_quiz_config import quiz_system as quiz_system
 from test_m3_quiz_contract import draft_case as draft_case
 
 from final_review.api import create_app
+from final_review.config import ChatModelConfig
 from final_review.domain import DomainConflict, DomainNotFound, DomainService
 from final_review.llm import ReviewModel
 from final_review.quiz_generation import QuizGenerationError, generate_quiz, read_quiz
@@ -416,6 +417,15 @@ def test_repeated_chat_submission_returns_completed_job_without_restoring_active
     draft_case,
 ):
     system, _, plan, payload = draft_case
+    system.settings.chat_models = [
+        ChatModelConfig(
+            id="test",
+            label="测试模型",
+            model="test-model",
+            base_url="https://example.invalid/v1",
+            api_key="test-key",
+        )
+    ]
     body = {
         "course_id": "net",
         "conversation_id": "repeat",

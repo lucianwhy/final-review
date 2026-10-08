@@ -215,7 +215,7 @@ def test_actual_formats_keep_body_math_table_and_exclude_sources(system, tmp_pat
             doc = Document(path)
             text = "\n".join(p.text for p in doc.paragraphs)
         else:
-            with pdfplumber.open(path) as pdf:
+            with pdfplumber.open(path, unicode_norm="NFKC") as pdf:
                 text = "\n".join(page.extract_text() or "" for page in pdf.pages)
                 assert len(pdf.pages) >= 1
         assert "共同正文标记" in text and "AI 记忆建议" in text

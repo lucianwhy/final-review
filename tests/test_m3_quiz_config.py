@@ -4,6 +4,7 @@ from pydantic import ValidationError
 
 from final_review.agent import FinalReviewAgent, SessionConflict
 from final_review.api import create_app
+from final_review.config import ChatModelConfig
 from final_review.domain import DomainConflict, DomainNotFound, DomainService
 from final_review.quiz_config import merge_quiz_input, resolve_quiz_config
 from final_review.schemas import (
@@ -310,6 +311,15 @@ def test_explicit_false_and_null_are_preserved_when_merging():
 
 
 def test_resolve_api_and_chat_configuration_survive_reload(quiz_system):
+    quiz_system.settings.chat_models = [
+        ChatModelConfig(
+            id="test",
+            label="测试模型",
+            model="test-model",
+            base_url="https://example.invalid/v1",
+            api_key="test-key",
+        )
+    ]
     with TestClient(create_app(quiz_system.settings, quiz_system)) as client:
         result = client.post("/api/courses/net/quiz-config/resolve", json={"quiz_input": {}})
         assert result.status_code == 200 and result.json()["status"] == "needs_clarification"
