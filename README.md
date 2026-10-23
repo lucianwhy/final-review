@@ -104,7 +104,8 @@ docker compose up --build -d
 | --- | --- |
 | LLM_API_KEY / LLM_BASE_URL / LLM_MODEL | 聊天模型，须支持工具调用 |
 | NOTE_MODEL_TIMEOUT / NOTE_MODEL_MAX_RETRIES | 笔记 worker 单次模型请求超时（默认 120 秒）和底层重试次数（默认 1）；独立于网页聊天的 MODEL_TIMEOUT |
-| QUIZ_MODEL_TIMEOUT / QUIZ_MAX_REPAIRS | 正式试卷单次模型请求超时（默认 120 秒）与计划/候选共用的修复预算（默认 2）；失败任务可手动重试 |
+| QUIZ_MAX_OUTPUT_TOKENS / QUIZ_CHOICE_BATCH_SIZE / QUIZ_WRITTEN_BATCH_SIZE | 单次输出预算（默认 16384 tokens）、客观题单批题量（默认 5）、主观题单批题量（默认 2）；正式试卷最多 100 题 |
+| QUIZ_MODEL_TIMEOUT / QUIZ_MAX_REPAIRS | 正式试卷单次模型请求超时（默认 120 秒）与有界修复预算（默认 2）；分批生成并保存已核验进度，失败可续生成 |
 | EXPORTS_DIR | 私有导出文件目录（默认 exports）；后端与导出 worker 必须指向同一目录，不可作为静态目录公开 |
 | EXPORT_PANDOC_EXECUTABLE / EXPORT_CHROMIUM_EXECUTABLE | 可选转换器绝对路径；默认使用随依赖安装的 Pandoc 和 Playwright Chromium |
 | EMBEDDING_API_KEY / EMBEDDING_BASE_URL / EMBEDDING_MODEL | Embedding 提供商 |

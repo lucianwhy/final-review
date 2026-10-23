@@ -14,6 +14,7 @@ from .quiz_contract import (
     QuizDraftPayload,
     QuizDraftPlan,
     QuizGenerationContext,
+    QuizPaperReview,
     QuizSemanticReview,
 )
 from .rag import CourseRetriever, KnowledgeBase
@@ -37,6 +38,10 @@ class ModelError(RuntimeError):
 
 class ModelOutputLimitError(ModelError):
     """Safe, actionable output truncation; caller may split the batch."""
+
+    def __init__(self, message, diagnostics=None):
+        super().__init__(message)
+        self.diagnostics = diagnostics or {}
 
 
 logger = logging.getLogger(__name__)
@@ -77,7 +82,15 @@ class ReviewModel:
             raw = response.get("raw") if isinstance(response, dict) else None
             metadata = getattr(raw, "response_metadata", {}) or {}
             if metadata.get("finish_reason") == "length":
-                raise ModelOutputLimitError("模型输出达到长度上限，请缩小生成批次后重试")
+                diagnostics = {
+                    "schema": schema.__name__,
+                    "finish_reason": "length",
+                    "usage": getattr(raw, "usage_metadata", None),
+                }
+                logger.warning("Structured response truncated: %s", diagnostics)
+                raise ModelOutputLimitError(
+                    "模型输出达到长度上限，请缩小生成批次后重试", diagnostics
+                )
             parsed = response.get("parsed") if isinstance(response, dict) else response
             parsing_error = response.get("parsing_error") if isinstance(response, dict) else None
             if parsed is None and raw is not None and isinstance(raw.content, str):
@@ -223,12 +236,14 @@ class ReviewModel:
             "仅生成当前批次的正式试卷候选，严格按 config 和 plan 的题型/知识点数量出题。"
             "question_slots 给出当前批次题目对应的知识点、题型及分值，按槽位顺序生成；"
             "当前批次 order 从1开始。previous_questions 是已完成题目摘要，避免语义重复。"
+            "repair_notes 是整卷复核反馈，应在当前槽位范围内修复。"
             "顺序从1连续排列，ID唯一，分值为正且符合总分。提供答案、解析和得分点。"
             "choice 提供不同选项和从0开始的 correct_option；true_false 提供 boolean_answer；"
             "fill_blank 提供 accepted_answers。引用仅来自 evidence，quote逐字摘录。"
             "每题每个chunk_id最多引用一次；同一片段支持多个事实时，引用覆盖这些事实的"
             "一段连续原文，不按句子重复添加同一个chunk_id。原文空格和标点不能增删。"
-            "单资料 provenance=source，多资料=synthesis；仅明确获准才可生成无引用的"
+            "provenance按引用的不同document_id数量判断：恰好1份文件为source，"
+            "2份及以上不同文件为synthesis；不是按知识点或chunk数量判断。仅明确获准才可生成无引用的"
             "ai_supplement。不要输出来源标签，标签由服务器计算。",
             {**context.model_dump(mode="json"), "plan": plan.model_dump(mode="json")},
         )
@@ -246,12 +261,28 @@ class ReviewModel:
             {**context.model_dump(mode="json"), "draft": draft},
         )
 
+    def review_quiz_paper(self, context, draft):
+        summaries = [
+            {k: q[k] for k in ("id", "question_type", "knowledge_point", "stem")}
+            for q in draft["questions"]
+        ]
+        return self.structured(
+            QuizPaperReview,
+            "复核整卷题目摘要。检查题型/知识点覆盖与配置、计划一致，指定重点没有遗漏，"
+            "题干语义没有重复，不包含排除内容。不重新输出试卷或逐题长解析。"
+            "仅返回整卷supported、具体issues和需要重新生成的affected_question_ids。"
+            "重点确实无法由所选资料支持时说明，不靠编造题目凑齐。通过时issues和IDs为空。",
+            {"config": context.config.model_dump(mode="json"), "questions": summaries},
+        )
+
     def repair_quiz_draft(self, context, plan, draft, issues):
         return self.structured(
             QuizDraftPayload,
             "修复候选试卷的具体问题，返回完整候选试卷。保持配置、计划、题型数量和题目ID；"
             "未受影响题目尽量保持原样。引用只能来自evidence且quote逐字摘录；遵守AI补充授权。"
             "每题citations中的chunk_id必须唯一，同片段多条引用合并为一段连续原文。"
+            "provenance必须按citations中不同document_id数量重新计算：1份source，2份及以上synthesis。"
+            "保持题目ID；本批order必须从1连续排列，不能使用槽位的全局order。"
             "候选输出仅包含QuizDraftPayload字段，不输出服务端来源标签或references。",
             {**context.model_dump(mode="json"), "plan": plan, "draft": draft, "issues": issues},
         )

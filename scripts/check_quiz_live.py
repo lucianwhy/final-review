@@ -111,7 +111,9 @@ def main():
         ).config
         queued = enqueue_quiz(store, config, model_id=model_config.id)
         model = build_review_model(
-            model_config, settings.model_copy(update={"model_timeout": settings.quiz_model_timeout})
+            model_config,
+            settings.model_copy(update={"model_timeout": settings.quiz_model_timeout}),
+            quiz_generation=True,
         )
         print(f"开始真实模型验收：{model_config.id}；2题，20分", flush=True)
         process_quiz_job(store, model, settings, store.claim_quiz_job())

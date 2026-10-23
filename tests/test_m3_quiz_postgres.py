@@ -23,6 +23,46 @@ from final_review.storage import StorageError, stable_key
 pytestmark = pytest.mark.integration
 
 
+def test_batch_checkpoint_survives_new_postgres_connection(database_url):  # noqa: F811
+    """A failed second batch can resume after the original worker/store is gone."""
+    store, config = prepared(database_url)
+    data = config.model_dump(mode="json")
+    data.update(
+        blueprint=[{"question_type": "choice", "question_count": 10}],
+        question_count=10,
+        total_score=20,
+    )
+    config = type(config).model_validate(data)
+    model = ScriptedModel()
+    original = model.quiz_draft
+    calls = []
+
+    def fail_second(ctx, plan):
+        calls.append(ctx.question_slots[0]["order"])
+        if calls[-1] == 6:
+            raise RuntimeError("simulated provider outage")
+        return original(ctx, plan)
+
+    model.quiz_draft = fail_second
+    queued = enqueue_quiz(store, config, model_id="default")
+    process_quiz_job(store, model, Settings(_env_file=None), store.claim_quiz_job())
+    assert store.get("quiz_job", queued["job_id"])["progress"]["completed_questions"] == 5
+    store.close()
+    recovered = PostgresStore(database_url)
+    recovered.bind_user(str(USER))
+    try:
+        retry_quiz(recovered, str(USER), "course-1", queued["job_id"])
+        resumed = ScriptedModel()
+        resumed.quiz_draft_plan = lambda *_args, **_: pytest.fail("plan already persisted")
+        process_quiz_job(recovered, resumed, Settings(_env_file=None), recovered.claim_quiz_job())
+        done = recovered.get("quiz_job", queued["job_id"])
+        assert done["status"] == "succeeded", done["error"]
+        assert done["progress"]["completed_questions"] == 10
+        assert len(recovered.scan("learning_asset", {"course_id": "course-1"})) == 1
+    finally:
+        recovered.close()
+
+
 def seed_quiz(store, owner=str(USER), course_id="course-1"):
     store.ingest(
         {

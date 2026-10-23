@@ -39,7 +39,7 @@ M3-02 已接入实际生成和持久草稿；当前运行方式、任务 API 及
 | exam_id | 可选，未关联时是独立练习配置；必须属于同一用户/课程且未归档 |
 | scope_mode | course、chapter、knowledge_points；章节/知识点明确时可推导模式 |
 | chapter / knowledge_points | 章节或知识点范围；course 模式不能同时指定这两项 |
-| blueprint | 六类题型的数量配额，题型不能重复；总计 1～36 题 |
+| blueprint | 六类题型的数量配额，题型不能重复；总计 1～100 题 |
 | duration_mode / duration_minutes | timed 必须有 1～240 分钟；untimed 不带分钟数 |
 | difficulty | basic、standard、advanced、mixed |
 | emphasis / excluded_topics | 重点与排除项；相同项冲突需要澄清 |
