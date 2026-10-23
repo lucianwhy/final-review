@@ -4,6 +4,40 @@ test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:8081/test/reset");
 });
 
+test("AI navigation opens without a course and explains how to find existing courses", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "AI 对话", exact: true }).first().click();
+  await expect(page).toHaveURL(/#home$/);
+  await expect(page.getByRole("heading", { name: "今天想从哪里开始？" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "输入你的问题" })).toBeDisabled();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "今天想从哪里开始？" })).toBeVisible();
+  await page.getByRole("link", { name: "到课程管理核对当前账户" }).click();
+  await expect(page.getByRole("heading", { name: "我的课程" })).toBeVisible();
+});
+
+test("current account is visible and switching accounts returns to sign in", async ({ page }) => {
+  let signedIn = true;
+  await page.route("**/api/auth/me", route => route.fulfill({
+    status: signedIn ? 200 : 401,
+    json: signedIn ? { id: "empty-account", email: "string", local: false } : { detail: "请先登录" },
+  }));
+  await page.route("**/api/courses", route => route.fulfill({
+    status: signedIn ? 200 : 401,
+    json: signedIn ? { items: [] } : { detail: "请先登录" },
+  }));
+  await page.route("**/api/auth/sign-out", async route => {
+    expect(route.request().method()).toBe("POST");
+    signedIn = false;
+    await route.fulfill({ json: { signed_out: true } });
+  });
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "当前账户" })).toContainText("string");
+  await page.getByRole("button", { name: "切换账户", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "登录后管理课程" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "当前账户" })).toHaveCount(0);
+});
+
 test("one course holds two exams and can be deleted and restored", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "＋ 新建课程" }).click();

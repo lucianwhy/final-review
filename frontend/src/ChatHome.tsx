@@ -592,6 +592,7 @@ export default function ChatHome({ courseId, selectedConversationId, titleRefres
             <i className="chat-welcome-icon" aria-hidden="true"><span>✦</span></i>
             <h1>今天想从哪里开始？</h1>
           </div>
+          {!courseId && <p>请先选择一门课程。看不到原有课程？<a href="#workbench">到课程管理核对当前账户</a>。</p>}
           <div className="chat-starters" role="group" aria-label="快捷提问">
             {[
               { label: "生成练习题", emoji: "📝", prompt: "请根据当前课程资料，给我生成一组练习题，并附上答案和解析。" },

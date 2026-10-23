@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "antd";
+import AccountStatus from "./AccountStatus";
 import { api, ApiError, type Course, type DeletionPreview, type Exam, type ExamInput } from "./workbench-api";
 import "./workbench.css";
 
@@ -119,6 +120,7 @@ export default function Workbench({ selectedId, onSelect }: Props) {
   const counts = { active: courses.filter(x => !x.status || x.status === "active").length, archived: courses.filter(x => x.status === "archived").length, deleted: courses.filter(x => x.status === "deleted").length };
 
   return <div className="workbench">
+    <AccountStatus key={unauthorized ? "signed-out" : "signed-in"} />
     <div className="wb-heading"><div><span className="wb-eyebrow">课程管理</span><h1>把每一场考试，放回它的课程里。</h1><p>先整理课程，再记录考试范围与老师的要求。</p></div><Button type="primary" size="large" className="wb-create-button" onClick={() => setCourseEdit({ kind: "create" })}>＋ 新建课程</Button></div>
     {notice && <p className="wb-notice" role="status">{notice}</p>}
     {error && <p className="wb-error" role="alert">{error} <button onClick={() => { setError(""); refreshCourses().catch(e => setError(String(e))); }}>重新加载</button></p>}
