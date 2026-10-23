@@ -11,3 +11,18 @@
 .quiz-drafts-list > button span { color: #69766e; }
 .quiz-draft-card { display: block; text-align: left; padding: 14px; margin-top: 12px; border: 1px solid #dce5de; border-radius: 10px; background: #f7faf7; cursor: pointer; }
 .quiz-draft-card span { display: block; margin-top: 6px; color: #69766e; }
+.quiz-actions { margin: 18px 0; }
+.quiz-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.quiz-action-buttons button, .quiz-confirm-summary button, .quiz-question-meta button { border: 1px solid #a8c4b1; border-radius: 7px; background: #f4f8f5; padding: 7px 12px; cursor: pointer; }
+.quiz-action-buttons button:disabled, .quiz-confirm-summary button:disabled { opacity: .55; cursor: not-allowed; }
+.quiz-action-error { color: #9e2e2e; }
+.quiz-action-warning { border-left: 3px solid #c99535; background: #fff9ea; padding: 8px 12px; }
+.quiz-confirm-summary { border: 1px solid #c8d9ce; border-radius: 8px; padding: 12px; background: #f7faf8; }
+.quiz-confirm-summary button { margin-right: 8px; }
+.quiz-edit-form section { border-top: 1px solid #dce5de; padding: 14px 0; }
+.quiz-edit-form label { display: block; margin: 10px 0; font-weight: 600; }
+.quiz-edit-form input, .quiz-edit-form textarea, .quiz-edit-form select { display: block; width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #b8c9be; border-radius: 6px; font: inherit; }
+.quiz-edit-form textarea { min-height: 78px; resize: vertical; }
+.quiz-print-frame { width: 100%; height: min(72vh, 900px); border: 1px solid #dce5de; background: white; }
+.quiz-attempt-list { margin-top: 28px; }
+.quiz-attempt-list > button { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; margin: 8px 0; padding: 12px; border: 1px solid #dce5de; border-radius: 8px; background: #f7faf7; cursor: pointer; }

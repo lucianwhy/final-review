@@ -304,4 +304,17 @@ def parse_chat_decision(content):
     content = content.strip()
     if content.startswith("```"):
         content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.IGNORECASE)
-    return ChatDecision.model_validate(json.loads(content))
+    payload = json.loads(content)
+    if isinstance(payload, dict) and payload.get("intent") == "quiz":
+        # Retrieval action is unused for a quiz. Some providers return a quiz
+        # action outside the retrieval-only enum, so keep the default instead.
+        if payload.get("action") not in {None, "general", "overview", "search", "read"}:
+            payload.pop("action")
+        quiz_input = payload.get("quiz_input")
+        if isinstance(quiz_input, dict):
+            # An omitted field must stay omitted when merging a pending quiz.
+            # Models sometimes spell "not specified" as null for list fields.
+            for field in ("knowledge_points", "emphasis", "excluded_topics", "source_types"):
+                if field in quiz_input and quiz_input[field] is None:
+                    quiz_input.pop(field)
+    return ChatDecision.model_validate(payload)

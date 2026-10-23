@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "antd";
 import ReactMarkdown from "react-markdown";
+import QuizDraftActions from "./QuizDraftActions";
 import { api } from "./workbench-api";
 import "./quiz-drafts.css";
 
@@ -8,27 +9,34 @@ export type QuizDraftCard = { asset_id: string; revision_id: string; title: stri
 export type QuizJob = { job_id: string; status: "queued" | "running" | "failed" | "succeeded"; stage: string; progress?: { completed_questions: number; total_questions: number }; error?: string; result?: QuizDraftCard };
 export const quizStages: Record<string, string> = { queued: "等待生成", retrieving: "读取资料", planning: "分配考点与题型", generating: "生成题目", validating: "检查题目结构与来源", reviewing: "复核答案与解析", repairing: "修复题目", publishing: "保存草稿" };
 type Ref = { document_id: string; chunk_id: string; file_name: string; quote: string; available?: boolean; position_kind?: string; position?: number };
-type Question = { question_revision_id: string; order: number; score: number; question_type: string; knowledge_point: string; stem: string; options: string[]; reference_answer: string; explanation: string; must_include: string[]; common_mistakes: string[]; scoring_tips: string; source_label: string; references: Ref[] };
-type Paper = { revision: { title: string; state: string; total_score: number; questions: Question[]; coverage: { read_chunks: number; available_chunks: number; partial: boolean } } };
+export type Question = { question_revision_id: string; order: number; score: number; question_type: string; knowledge_point: string; stem: string; options: string[]; correct_option: number | null; boolean_answer: boolean | null; accepted_answers: string[]; reference_answer: string; explanation: string; provenance: string; citations: { chunk_id: string; quote: string }[]; must_include: string[]; common_mistakes: string[]; scoring_tips: string; source_label: string; source_review_status?: string; references: Ref[]; candidate_references?: Ref[] };
+type ReviewItem = { question_id: string; supported: boolean; issues: string[] };
+export type Paper = { asset: { latest_revision_id: string; current_revision_id: string | null }; revision: { quiz_revision_id: string; title: string; state: string; total_score: number; questions: Question[]; coverage: { read_chunks: number; available_chunks: number; partial: boolean }; pending_semantic_review_question_ids?: string[]; confirmation_issues?: string[]; review_audit?: { items?: ReviewItem[] }[] } };
 const typeLabels: Record<string, string> = { choice: "选择题", true_false: "判断题", fill_blank: "填空题", short_answer: "简答题", calculation: "计算题", proof: "证明题" };
 
-export default function QuizDraftPreview({ courseId, card, onClose }: { courseId: string; card: QuizDraftCard; onClose: () => void }) {
+export default function QuizDraftPreview({ courseId, card, onClose, onRevisionSaved, onAttemptStarted }: { courseId: string; card: QuizDraftCard; onClose: () => void; onRevisionSaved?: (revisionId: string) => void; onAttemptStarted?: (attemptId: string) => void }) {
   const [paper, setPaper] = useState<Paper | null>(null);
   const [error, setError] = useState("");
+  const [revisionId, setRevisionId] = useState(card.revision_id);
+  useEffect(() => { setRevisionId(card.revision_id); }, [card.revision_id]);
   useEffect(() => {
     let active = true;
     setPaper(null); setError("");
-    void api<Paper>(`/api/courses/${encodeURIComponent(courseId)}/quizzes/${encodeURIComponent(card.asset_id)}/revisions/${encodeURIComponent(card.revision_id)}`)
+    void api<Paper>(`/api/courses/${encodeURIComponent(courseId)}/quizzes/${encodeURIComponent(card.asset_id)}/revisions/${encodeURIComponent(revisionId)}`)
       .then(value => { if (active) setPaper(value); })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : "草稿读取失败"); });
     return () => { active = false; };
-  }, [courseId, card.asset_id, card.revision_id]);
-  return <Modal open title="试卷草稿预览" onCancel={onClose} footer={null} width={880} styles={{ body: { maxHeight: "72vh", overflowY: "auto" } }}>
+  }, [courseId, card.asset_id, revisionId]);
+  return <Modal open title={paper?.revision.state === "draft" ? "试卷草稿预览" : "试卷预览"} onCancel={onClose} footer={null} width={880} styles={{ body: { maxHeight: "72vh", overflowY: "auto" } }}>
     {error ? <p role="alert">{error}</p> : !paper ? <p role="status">正在读取草稿…</p> : <div className="quiz-draft-preview">
       <h2>{paper.revision.title}</h2>
-      <p>{paper.revision.questions.length} 题 · 共 {paper.revision.total_score} 分 · 草稿</p>
+      <p>{paper.revision.questions.length} 题 · 共 {paper.revision.total_score} 分 · {paper.revision.state === "draft" ? "草稿" : "正式版本"}</p>
       <p>已读取 {paper.revision.coverage.read_chunks} / {paper.revision.coverage.available_chunks} 个资料片段{paper.revision.coverage.partial ? "，本次仅覆盖部分资料。" : "。"}</p>
-      <p>编辑、确认与开始测试将在后续开放。</p>
+      <QuizDraftActions courseId={courseId} assetId={card.asset_id} paper={paper} onAttemptStarted={onAttemptStarted} onUpdated={updated => {
+        const nextId = updated.revision.quiz_revision_id;
+        setPaper(updated);
+        if (nextId !== revisionId) { setRevisionId(nextId); onRevisionSaved?.(nextId); }
+      }} />
       {paper.revision.questions.map(q => <article key={q.question_revision_id}>
         <div className="quiz-question-meta"><strong>第 {q.order} 题 · {typeLabels[q.question_type]} · {q.score} 分</strong><span>{q.source_label}</span></div>
         <small>考点：{q.knowledge_point}</small>

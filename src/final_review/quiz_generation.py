@@ -531,6 +531,7 @@ def read_quiz(store, user_id, course_id, asset_id, revision_id):
     ):
         raise DomainNotFound(revision_id)
     questions = []
+    pending_review = set(payload.get("pending_semantic_review_question_ids", []))
     for slot in payload["questions"]:
         question = domain._owned("question_revision", slot["question_revision_id"])
         if question["quiz_revision_id"] != revision_id or question["course_id"] != course_id:
@@ -547,4 +548,11 @@ def read_quiz(store, user_id, course_id, asset_id, revision_id):
                     for c in store.list_material_chunks(ref["document_id"])
                 )
             )
+        if slot["question_revision_id"] in pending_review:
+            # Keep submitted references available to the future editor without
+            # presenting them as verified sources for changed draft content.
+            questions[-1]["candidate_references"] = questions[-1]["references"]
+            questions[-1]["references"] = []
+            questions[-1]["source_label"] = "来源待复核"
+            questions[-1]["source_review_status"] = "pending"
     return {"asset": asset, "revision": {**payload, "questions": questions}}

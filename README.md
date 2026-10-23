@@ -19,6 +19,10 @@
 | 恢复 | 自定义 PostgreSQL Checkpointer，保存图状态、父检查点、pending writes |
 | 笔记复核 | “我的笔记”找回草稿、按考点编辑 Markdown 和引用、差异预览、确认归档与不可变正式版本历史；见 [笔记编辑与确认](docs/note-review.md) |
 | 正式试卷草稿 | 配置确认后后台生成，校验题型/分值/引用并逐题复核；持久化 Quiz/Question revisions，在原对话与“模拟测验”找回并预览答案和来源；见 [试卷草稿生成](docs/quiz-draft-generation.md) |
+| 试卷编辑与正式作答 | 草稿编辑、语义复核、确认与两种打印版；从已确认版本开始在线作答、评分、逐题查看与追问。本地工程验收：后端全量 350 通过、隔离 PostgreSQL 12 通过、浏览器 43 通过；见 [M3 开发报告](docs/m3-development-report-2026-10-12.md) |
+| 错题管理（M4 第一轮） | 正式评分自动生成可追溯错题；按课程、考试、章节、知识点、题型和掌握状态组合筛选，手动标记并创建有记录的单题重练；见 [开发报告与手动验收清单](docs/m4-round1-development-report-2026-10-21.md)。报告和计划仍待后续开发。 |
+
+M3 的实际验证结果见 [完整验收记录](docs/m3-acceptance-2026-10-12.md)；本地启动和全链路检查见 [M3 操作手册](docs/m3-local-runbook.md)，源码自学顺序见 [M3 学习路线](docs/m3-source-learning-route.md)。
 | 交付 | FastAPI /docs、JSON 响应、题答分离 Markdown 导出、Docker Compose |
 
 ```mermaid

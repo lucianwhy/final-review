@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Identifier = Annotated[str, Field(min_length=1, max_length=100, pattern=r"^[\w.-]+$")]
 Text = Annotated[str, Field(min_length=1, max_length=20000)]
@@ -110,6 +110,42 @@ class NoteExportCreate(Model):
 
 class NoteConfirm(NoteConfirmPreview):
     confirmation_id: Identifier
+
+
+class QuizConfirm(Model):
+    confirmation_id: Identifier
+
+
+class FormalAnswerSave(Model):
+    question_revision_id: Identifier
+    answer: int | bool | str | None = None
+    expected_version: int = Field(ge=0, strict=True)
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def strict_answer_kind(cls, value):
+        if value is not None and type(value) not in {int, bool, str}:
+            raise ValueError("答案类型无效")
+        return value
+
+
+class QuizFollowUpRequest(Model):
+    message: Text = Field(max_length=4000)
+
+
+class MasteryMark(Model):
+    status: Literal["mastered", "unmastered"]
+
+
+class MistakePracticeAnswer(Model):
+    answer: int | bool | str
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def strict_answer_kind(cls, value):
+        if type(value) not in {int, bool, str}:
+            raise ValueError("答案类型无效")
+        return value
 
 
 class ConfirmationConsume(Model):

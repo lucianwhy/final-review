@@ -1,0 +1,20 @@
+.formal-attempt { overflow-wrap: anywhere; }
+.formal-attempt article { border-top: 1px solid #dce5de; padding: 18px 0; }
+.formal-attempt article h3 { margin-bottom: 4px; }
+.formal-attempt [role="timer"] { position: sticky; top: 0; z-index: 2; padding: 10px; border: 1px solid #bed4c3; border-radius: 8px; background: #f1f8f3; font-weight: 700; }
+.formal-attempt label { display: block; margin: 8px 0; }
+.formal-attempt input[type="text"], .formal-attempt textarea, .formal-attempt article > label > input { display: block; width: 100%; margin-top: 5px; padding: 9px; border: 1px solid #b8c9be; border-radius: 6px; font: inherit; }
+.formal-attempt textarea { min-height: 110px; resize: vertical; }
+.formal-options label { display: flex; align-items: center; gap: 9px; }
+.formal-save { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+.formal-save span { color: #53685b; font-size: 13px; }
+.formal-submit { border-top: 1px solid #dce5de; padding: 20px 0; }
+.formal-submit button, .formal-save button { border: 1px solid #91b89b; border-radius: 7px; background: #edf7ef; padding: 8px 14px; cursor: pointer; }
+.formal-error { color: #9e2e2e; }
+.formal-grade-summary, .formal-grade { border: 1px solid #c8d9ce; border-radius: 8px; background: #f7faf8; padding: 12px; margin-top: 14px; }
+.formal-grade-summary p { color: #7b4b1d; font-weight: 700; }
+.formal-result-extra { margin-top: 12px; padding: 12px; border-left: 3px solid #a8c4b1; background: #fbfcfb; }
+.formal-result-extra details { padding: 8px; background: #f2f6f3; margin: 8px 0; }
+.formal-result-extra blockquote { border-left: 3px solid #c8d7cc; margin-left: 0; padding-left: 12px; }
+.formal-result-extra button { border: 1px solid #91b89b; border-radius: 7px; background: #edf7ef; padding: 8px 14px; cursor: pointer; }
+.formal-followup { border-top: 1px solid #dce5de; padding: 8px 0; }
