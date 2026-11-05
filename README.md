@@ -7,15 +7,15 @@
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com/?font=Fira+Code&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=9FDDBD&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=Turn+course+materials+into+cited+notes.;Practice+with+source-grounded+mock+exams.;Review+weak+points.+Build+understanding.">
-  <img alt="Turn course materials into cited notes. Practice with source-grounded mock exams. Review weak points. Build understanding." src="https://readme-typing-svg.demolab.com/?font=Fira+Code&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=286B59&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=Turn+course+materials+into+cited+notes.;Practice+with+source-grounded+mock+exams.;Review+weak+points.+Build+understanding." width="720" height="48">
+  <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com/?font=Noto+Sans+SC&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=9FDDBD&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=%E6%8A%8A%E8%AF%BE%E7%A8%8B%E8%B5%84%E6%96%99%E6%95%B4%E7%90%86%E6%88%90%E6%9C%89%E6%9D%A5%E6%BA%90%E7%9A%84%E5%A4%8D%E4%B9%A0%E7%AC%94%E8%AE%B0%3B%E5%9B%B4%E7%BB%95%E8%80%83%E8%AF%95%E9%87%8D%E7%82%B9%EF%BC%8C%E7%94%9F%E6%88%90%E6%A8%A1%E6%8B%9F%E6%B5%8B%E9%AA%8C%3B%E8%BF%BD%E8%B8%AA%E9%94%99%E9%A2%98%E4%B8%8E%E8%96%84%E5%BC%B1%E7%82%B9%EF%BC%8C%E8%AE%A9%E4%B8%8B%E4%B8%80%E6%AC%A1%E5%A4%8D%E4%B9%A0%E6%9B%B4%E6%9C%89%E6%96%B9%E5%90%91">
+  <img alt="把课程资料整理成有来源的复习笔记。围绕考试重点，生成模拟测验。追踪错题与薄弱点，让下一次复习更有方向。" src="https://readme-typing-svg.demolab.com/?font=Noto+Sans+SC&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=286B59&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=%E6%8A%8A%E8%AF%BE%E7%A8%8B%E8%B5%84%E6%96%99%E6%95%B4%E7%90%86%E6%88%90%E6%9C%89%E6%9D%A5%E6%BA%90%E7%9A%84%E5%A4%8D%E4%B9%A0%E7%AC%94%E8%AE%B0%3B%E5%9B%B4%E7%BB%95%E8%80%83%E8%AF%95%E9%87%8D%E7%82%B9%EF%BC%8C%E7%94%9F%E6%88%90%E6%A8%A1%E6%8B%9F%E6%B5%8B%E9%AA%8C%3B%E8%BF%BD%E8%B8%AA%E9%94%99%E9%A2%98%E4%B8%8E%E8%96%84%E5%BC%B1%E7%82%B9%EF%BC%8C%E8%AE%A9%E4%B8%8B%E4%B8%80%E6%AC%A1%E5%A4%8D%E4%B9%A0%E6%9B%B4%E6%9C%89%E6%96%B9%E5%90%91" width="720" height="48">
 </picture>
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent_workflow-286B59?style=flat-square)](docs/architecture.md)
+[![LangGraph](https://img.shields.io/badge/LangGraph-%E6%99%BA%E8%83%BD%E5%B7%A5%E4%BD%9C%E6%B5%81-286B59?style=flat-square)](docs/architecture.md)
 [![PostgreSQL + pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)](docs/local-postgres.md)
-[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white)](src/final_review/api.py)
-[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-%E6%8E%A5%E5%8F%A3%E6%9C%8D%E5%8A%A1-009688?style=flat-square&logo=fastapi&logoColor=white)](src/final_review/api.py)
+[![Docker Compose](https://img.shields.io/badge/Docker-%E5%AE%B9%E5%99%A8%E9%83%A8%E7%BD%B2-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
 
 <!-- Keep these links. Translations will automatically update with the README. -->
 [中文](README.md) |
@@ -35,6 +35,11 @@
 基于 **LangChain + LangGraph + PostgreSQL/pgvector** 的期末复习 Agent 后端。可独立运行，也可作为学习系统中的一个 Agent 模块使用。
 
 接收课程资料，完成资料入库、带来源问答、模拟出题、作答评测与薄弱点反馈。原有 [SKILL.md](SKILL.md) 保留为领域规范；[policy.py](src/final_review/policy.py) 和工作流把关键规则落实为代码。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://skillicons.dev/icons?i=python,fastapi,postgres,docker,react,ts,vite,git&amp;theme=dark">
+  <img alt="技术栈：Python、FastAPI、PostgreSQL、Docker、React、TypeScript、Vite、Git" src="https://skillicons.dev/icons?i=python,fastapi,postgres,docker,react,ts,vite,git&amp;theme=light" width="448" height="48">
+</picture>
 
 ## 能力与实现
 

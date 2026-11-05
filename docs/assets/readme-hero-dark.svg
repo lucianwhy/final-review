@@ -1,43 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
-  <title id="title">Final Review Agent</title>
-  <desc id="desc">An evidence-grounded study workspace. Course materials become cited notes, practice exams, and targeted review through a LangGraph agent.</desc>
+  <title id="title">期末复习智能助手</title>
+  <desc id="desc">从课程资料出发，生成带来源的笔记、模拟测验和薄弱点复习建议。</desc>
   <defs>
     <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#2b4053"/></pattern>
   </defs>
   <rect width="1200" height="420" rx="24" fill="#101d2b"/>
   <rect x="650" width="550" height="420" rx="24" fill="url(#grid)"/>
   <path d="M0 396h1200v24H24A24 24 0 0 1 0 396" fill="#9fddbd"/>
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+  <g font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Segoe UI', Arial, sans-serif">
     <rect x="48" y="42" width="178" height="28" rx="14" fill="#233e3b"/>
     <circle cx="65" cy="56" r="4" fill="#9fddbd"/>
-    <text x="79" y="60" font-size="11" font-weight="700" letter-spacing="1.5" fill="#9fddbd">LEARN WITH EVIDENCE</text>
-    <text x="46" y="138" font-size="57" font-weight="750" letter-spacing="-2.5" fill="#f4f2ea">Final Review</text>
-    <text x="46" y="199" font-size="57" font-weight="750" letter-spacing="-2.5" fill="#f4f2ea">Agent<tspan fill="#9fddbd">.</tspan></text>
-    <text x="49" y="240" font-size="18" fill="#a5b6c7">From course materials to focused practice.</text>
-    <text x="49" y="267" font-size="18" fill="#a5b6c7">Every answer starts with a source.</text>
+    <text x="79" y="60" font-size="11" font-weight="700" letter-spacing="1.5" fill="#9fddbd">让每次复习都有据可依</text>
+    <text x="46" y="138" font-size="57" font-weight="750" letter-spacing="-2.5" fill="#f4f2ea">期末复习</text>
+    <text x="46" y="199" font-size="57" font-weight="750" letter-spacing="-2.5" fill="#f4f2ea">智能助手<tspan fill="#9fddbd">.</tspan></text>
+    <text x="49" y="240" font-size="18" fill="#a5b6c7">从课程资料出发，让复习更有方向。</text>
+    <text x="49" y="267" font-size="18" fill="#a5b6c7">笔记有来源，练习有反馈，薄弱点有跟进。</text>
     <path d="M49 297h520" stroke="#2b4053"/>
-    <text x="49" y="326" font-size="12" font-weight="600" fill="#f4f2ea">LangChain / LangGraph / PostgreSQL</text>
-    <text x="49" y="350" font-size="12" letter-spacing="1.8" fill="#a5b6c7">INGEST · RETRIEVE · PRACTICE · REFLECT</text>
+    <text x="49" y="326" font-size="12" font-weight="600" fill="#f4f2ea">Final Review Agent · LangGraph / PostgreSQL</text>
+    <text x="49" y="350" font-size="12" letter-spacing="1.8" fill="#a5b6c7">资料入库 · 来源检索 · 模拟测验 · 反馈复习</text>
     <rect x="674" y="48" width="478" height="308" rx="18" fill="#172839" stroke="#2b4053"/>
     <circle cx="696" cy="69" r="4" fill="#de9778"/><circle cx="711" cy="69" r="4" fill="#d9bb75"/><circle cx="726" cy="69" r="4" fill="#80ad93"/>
-    <text x="748" y="73" font-size="10" letter-spacing="1.2" fill="#a5b6c7">THE REVIEW LOOP</text>
+    <text x="748" y="73" font-size="10" letter-spacing="1.2" fill="#a5b6c7">你的复习闭环</text>
     <path d="M674 88h478" stroke="#2b4053"/>
     <path d="M889 169h47m-6-5 6 5-6 5M1035 213v24m-5-6 5 6 5-6M939 283h-47m6-5-6 5 6 5M792 239v-24m-5 6 5-6 5 6" fill="none" stroke="#9fddbd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <rect x="700" y="123" width="186" height="82" rx="12" fill="#233e3b"/>
     <text x="714" y="144" font-size="10" letter-spacing="1" font-weight="700" fill="#9fddbd">01</text>
-    <text x="714" y="167" font-size="15" font-weight="650" fill="#f4f2ea">Course materials</text>
-    <text x="714" y="187" font-size="11" fill="#a5b6c7">Documents &amp; slides</text>
+    <text x="714" y="167" font-size="15" font-weight="650" fill="#f4f2ea">课程资料</text>
+    <text x="714" y="187" font-size="11" fill="#a5b6c7">课件 · 文档 · 教学材料</text>
     <rect x="940" y="123" width="186" height="82" rx="12" fill="#233e3b"/>
     <text x="954" y="144" font-size="10" letter-spacing="1" font-weight="700" fill="#9fddbd">02</text>
-    <text x="954" y="167" font-size="15" font-weight="650" fill="#f4f2ea">Cited notes</text>
-    <text x="954" y="187" font-size="11" fill="#a5b6c7">Grounded in sources</text>
+    <text x="954" y="167" font-size="15" font-weight="650" fill="#f4f2ea">来源笔记</text>
+    <text x="954" y="187" font-size="11" fill="#a5b6c7">整理考点，保留资料引用</text>
     <rect x="940" y="241" width="186" height="82" rx="12" fill="#233e3b"/>
     <text x="954" y="262" font-size="10" letter-spacing="1" font-weight="700" fill="#9fddbd">03</text>
-    <text x="954" y="285" font-size="15" font-weight="650" fill="#f4f2ea">Practice exams</text>
-    <text x="954" y="305" font-size="11" fill="#a5b6c7">Generate &amp; evaluate</text>
+    <text x="954" y="285" font-size="15" font-weight="650" fill="#f4f2ea">模拟测验</text>
+    <text x="954" y="305" font-size="11" fill="#a5b6c7">按需出题，作答后评分</text>
     <rect x="700" y="241" width="186" height="82" rx="12" fill="#233e3b"/>
     <text x="714" y="262" font-size="10" letter-spacing="1" font-weight="700" fill="#9fddbd">04</text>
-    <text x="714" y="285" font-size="15" font-weight="650" fill="#f4f2ea">Targeted review</text>
-    <text x="714" y="305" font-size="11" fill="#a5b6c7">Revisit weak points</text>
+    <text x="714" y="285" font-size="15" font-weight="650" fill="#f4f2ea">薄弱点复习</text>
+    <text x="714" y="305" font-size="11" fill="#a5b6c7">追踪错题，针对性重练</text>
+    <path transform="translate(846 136)" d="M4 2h10l5 5v15H4z M14 2v6h5 M8 12h7 M8 16h7" fill="none" stroke="#9fddbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path transform="translate(1086 136)" d="M4 3h16v18H4z M8 8h8 M8 12h5 M8 16l2 2 5-5" fill="none" stroke="#9fddbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path transform="translate(1086 254)" d="M7 4H4v18h16V4h-3 M8 2h8v5H8z M8 12h8 M8 16h5" fill="none" stroke="#9fddbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path transform="translate(846 254)" d="M19 8A8 8 0 1 0 20 17 M19 3v6h-6 M8 13l3 3 5-6" fill="none" stroke="#9fddbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>
