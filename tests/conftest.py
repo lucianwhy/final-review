@@ -394,6 +394,36 @@ class ScriptedModel:
             ]
         }
 
+    def review_quiz_edit(self, context, draft):
+        return {
+            "items": [
+                {"question_id": question_id, "supported": True, "issues": []}
+                for question_id in context["review_question_ids"]
+            ]
+        }
+
+    def grade_formal_subjective(self, context):
+        return {
+            "items": [
+                {
+                    "question_revision_id": item["question_revision_id"],
+                    "criteria": [
+                        {"criterion_id": criterion_id, "met": True, "reason": "测试答案覆盖得分点"}
+                        for criterion_id, _ in item["criteria"]
+                    ],
+                    "feedback": "已覆盖参考得分点。",
+                    "improvement_advice": "继续保持。",
+                }
+                for item in context["questions"]
+            ]
+        }
+
+    def follow_up_quiz_question(self, context, message):
+        return {
+            "answer": f"针对本题：{message}。请对照参考答案和解析。",
+            "cited_chunk_ids": [source["chunk_id"] for source in context["sources"][:1]],
+        }
+
     def repair_quiz_draft(self, context, plan, draft, issues):
         from final_review.quiz_contract import QuizDraftPlan
 

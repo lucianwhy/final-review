@@ -1,4 +1,4 @@
-export type NavigationIconName = "chat" | "courses" | "materials" | "notes" | "quiz" | "report";
+export type NavigationIconName = "chat" | "courses" | "materials" | "notes" | "quiz" | "mistakes" | "report";
 
 /** Navigation artwork traced from the approved reference, using the menu's color. */
 export default function NavigationIcon({ name }: { name: NavigationIconName }) {
@@ -22,6 +22,10 @@ export default function NavigationIcon({ name }: { name: NavigationIconName }) {
     {name === "quiz" && <>
       <path d="m4 25 2-8L22 2a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L12 23Z" />
       <path d="m19 5 6 6M6 17l6 6M4 25l4-1M3 30h24" />
+    </>}
+    {name === "mistakes" && <>
+      <path d="M6 4h20v24H6zM10 10h12M10 16h8M10 22h5" />
+      <path d="m20 20 2 2 5-6" />
     </>}
     {name === "report" && <>
       <rect x="4" y="16" width="4" height="10" rx=".8" /><rect x="13" y="9" width="4" height="17" rx=".8" /><rect x="22" y="2" width="4" height="24" rx=".8" />

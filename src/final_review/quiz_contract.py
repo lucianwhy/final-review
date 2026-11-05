@@ -22,6 +22,7 @@ class QuizGenerationContext(Model):
     prompt_version: str = "quiz-draft-v2-batched"
     question_slots: list[dict] = Field(default_factory=list, max_length=100)
     previous_questions: list[dict] = Field(default_factory=list, max_length=100)
+    repair_notes: list[str] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def bounded_evidence(self):
@@ -152,6 +153,20 @@ class QuizQuestionReview(Model):
 
 class QuizSemanticReview(Model):
     items: list[QuizQuestionReview] = Field(min_length=1, max_length=100)
+
+
+class QuizPaperReview(Model):
+    supported: bool = Field(strict=True)
+    issues: list[Text] = Field(default_factory=list, max_length=20)
+    affected_question_ids: list[Text] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def consistent_verdict(self):
+        if self.supported == bool(self.issues):
+            raise ValueError("整卷通过时不能有问题；未通过时必须说明问题")
+        if self.supported and self.affected_question_ids:
+            raise ValueError("整卷通过时不能标记待修复题目")
+        return self
 
 
 def validate_quiz_plan(context: QuizGenerationContext, value: dict) -> list[dict]:
@@ -288,7 +303,13 @@ def validate_quiz_draft(context: QuizGenerationContext, plan: dict, payload: dic
             if (question.provenance == "source" and count != 1) or (
                 question.provenance == "synthesis" and count < 2
             ):
-                fail("provenance", path, "来源声明与实际引用资料数量不一致")
+                fail(
+                    "provenance",
+                    path,
+                    f"本题实际引用 {count} 份不同文件，provenance={question.provenance} 不匹配。"
+                    "source只用于恰好一份文件；引用两份及以上文件必须设synthesis。"
+                    "文件数按document_id计算，不按chunk数量或知识点数量计算。",
+                )
             labels = sorted({SOURCE_LABELS[item.source_type] for item in refs})
             label = (
                 "综合改编（" + " + ".join(labels) + "）"

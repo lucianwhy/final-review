@@ -3,10 +3,12 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from final_review.api import create_app
 from final_review.config import ChatModelConfig
 from final_review.course_chat import CourseMaterials, cited_evidence, parse_chat_decision
+from final_review.quiz_config import merge_quiz_input
 from final_review.schemas import MaterialInput
 
 
@@ -15,6 +17,62 @@ from final_review.schemas import MaterialInput
 )
 def test_router_accepts_json_and_provider_code_fences(content):
     assert parse_chat_decision(content).intent == "ask"
+
+
+def test_router_accepts_unset_quiz_lists_without_erasing_pending_values():
+    decision = parse_chat_decision(
+        json.dumps(
+            {
+                "intent": "quiz",
+                "action": "quiz",
+                "quiz_input": {
+                    "difficulty": "basic",
+                    "knowledge_points": None,
+                    "emphasis": None,
+                    "excluded_topics": None,
+                    "source_types": None,
+                },
+            }
+        )
+    )
+    assert decision.action == "search"
+    assert decision.quiz_input.model_dump(exclude_unset=True) == {"difficulty": "basic"}
+    assert merge_quiz_input({"emphasis": ["原有重点"]}, decision.quiz_input).emphasis == [
+        "原有重点"
+    ]
+
+
+def test_router_still_rejects_invalid_nonempty_quiz_list_and_ask_action():
+    with pytest.raises(ValidationError):
+        parse_chat_decision('{"intent":"quiz","quiz_input":{"knowledge_points":"TCP"}}')
+    with pytest.raises(ValidationError):
+        parse_chat_decision('{"intent":"ask","action":"quiz"}')
+
+
+def test_siliconflow_quiz_route_requests_json_and_accepts_unset_lists(chat_setup):
+    setup = chat_setup
+    model = setup.system.settings.chat_models[0]
+    setup.system.settings.chat_models = [
+        model.model_copy(update={"base_url": "https://api.siliconflow.cn/v1"})
+    ]
+    message = "请生成一份模拟试卷"
+    setup.decisions[message] = {
+        "intent": "quiz",
+        "action": "quiz",
+        "quiz_input": {
+            "difficulty": "basic",
+            "knowledge_points": None,
+            "emphasis": None,
+            "excluded_topics": None,
+            "source_types": None,
+        },
+    }
+
+    response = send(setup, message, "siliconflow-json")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "needs_input"
+    assert setup.calls[-1]["response_format"] == {"type": "json_object"}
 
 
 @pytest.fixture

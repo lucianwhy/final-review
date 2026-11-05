@@ -85,6 +85,24 @@ def test_cleaning_preserves_formula_and_code():
     assert "\r" not in cleaned
 
 
+def test_prepare_removes_pdf_control_characters_before_storing_original_markdown(system):
+    material = MaterialInput(
+        course_id="net",
+        title="PDF 讲义",
+        source_type="homework",
+        markdown="TCP\x00 三次握手\n第二页\x01内容",
+    )
+
+    document, chunks = system.kb.prepare(
+        material,
+        sections=[{"position_kind": "page", "position": 1, "text": material.markdown}],
+    )
+
+    assert document["markdown"] == "TCP 三次握手\n第二页内容"
+    assert document["cleaned_markdown"] == document["markdown"]
+    assert chunks[0]["content"] == document["markdown"]
+
+
 @pytest.mark.parametrize("text", ["  \n\x00", "\ufffd" * 10])
 def test_unreadable_material_rejected(text):
     with pytest.raises(ValueError):

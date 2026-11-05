@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from time import monotonic, sleep
 
 import psycopg
 import pytest
@@ -21,6 +22,46 @@ from final_review.schemas import QuizInput
 from final_review.storage import StorageError, stable_key
 
 pytestmark = pytest.mark.integration
+
+
+def test_batch_checkpoint_survives_new_postgres_connection(database_url):  # noqa: F811
+    """A failed second batch can resume after the original worker/store is gone."""
+    store, config = prepared(database_url)
+    data = config.model_dump(mode="json")
+    data.update(
+        blueprint=[{"question_type": "choice", "question_count": 10}],
+        question_count=10,
+        total_score=20,
+    )
+    config = type(config).model_validate(data)
+    model = ScriptedModel()
+    original = model.quiz_draft
+    calls = []
+
+    def fail_second(ctx, plan):
+        calls.append(ctx.question_slots[0]["order"])
+        if calls[-1] == 6:
+            raise RuntimeError("simulated provider outage")
+        return original(ctx, plan)
+
+    model.quiz_draft = fail_second
+    queued = enqueue_quiz(store, config, model_id="default")
+    process_quiz_job(store, model, Settings(_env_file=None), claim_queued(store))
+    assert store.get("quiz_job", queued["job_id"])["progress"]["completed_questions"] == 5
+    store.close()
+    recovered = PostgresStore(database_url)
+    recovered.bind_user(str(USER))
+    try:
+        retry_quiz(recovered, str(USER), "course-1", queued["job_id"])
+        resumed = ScriptedModel()
+        resumed.quiz_draft_plan = lambda *_args, **_: pytest.fail("plan already persisted")
+        process_quiz_job(recovered, resumed, Settings(_env_file=None), claim_queued(recovered))
+        done = recovered.get("quiz_job", queued["job_id"])
+        assert done["status"] == "succeeded", done["error"]
+        assert done["progress"]["completed_questions"] == 10
+        assert len(recovered.scan("learning_asset", {"course_id": "course-1"})) == 1
+    finally:
+        recovered.close()
 
 
 def seed_quiz(store, owner=str(USER), course_id="course-1"):
@@ -74,11 +115,23 @@ def prepared(db_url):
     return store, seed_quiz(store)
 
 
+def claim_queued(store):
+    """The worker polls for a due job; it need not be claimable in the enqueue millisecond."""
+    deadline = monotonic() + 2
+    while monotonic() < deadline:
+        claimed = store.claim_quiz_job()
+        if claimed is not None:
+            return claimed
+        sleep(0.02)
+    pytest.fail("queued quiz job did not become claimable")
+
+
 def test_quiz_atomic_publish_relations_immutability_and_draft_attempt_block(database_url):  # noqa: F811
     store, config = prepared(database_url)
     try:
         queued = enqueue_quiz(store, config, model_id="default")
-        process_quiz_job(store, ScriptedModel(), Settings(_env_file=None), store.claim_quiz_job())
+        claimed = claim_queued(store)
+        process_quiz_job(store, ScriptedModel(), Settings(_env_file=None), claimed)
         job = store.get("quiz_job", queued["job_id"])
         assert job["status"] == "succeeded", job["error"]
         result = job["result"]
@@ -156,12 +209,12 @@ def test_quiz_queue_concurrent_idempotency_claim_expiry_and_retry(database_url):
         assert len(store.scan("quiz_job", {})) == 1
         with pytest.raises(DomainConflict):
             enqueue(20)
-        old = store.claim_quiz_job()
+        old = claim_queued(store)
         assert store.claim_quiz_job() is None
         row = store.get("quiz_job", old["job_id"])
         row["lease_until"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
         store.put("quiz_job", old["job_id"], row)
-        new = store.claim_quiz_job()
+        new = claim_queued(store)
         assert new["attempts"] == old["attempts"] + 1
         process_quiz_job(store, ScriptedModel(), Settings(_env_file=None), old)
         assert store.get("quiz_job", new["job_id"])["status"] == "running"
@@ -175,7 +228,7 @@ def test_quiz_publish_failure_rolls_back_real_database(database_url, monkeypatch
     store, config = prepared(database_url)
     try:
         enqueue_quiz(store, config, model_id="default")
-        job = store.claim_quiz_job()
+        job = claim_queued(store)
         original = store.put
 
         def fail(table, key, value):
@@ -196,7 +249,7 @@ def test_quiz_publish_failure_rolls_back_real_database(database_url, monkeypatch
             assert not store.scan(table, {})
         monkeypatch.setattr(store, "put", original)
         retry_quiz(store, str(USER), "course-1", job["job_id"])
-        process_quiz_job(store, ScriptedModel(), Settings(_env_file=None), store.claim_quiz_job())
+        process_quiz_job(store, ScriptedModel(), Settings(_env_file=None), claim_queued(store))
         assert store.get("quiz_job", job["job_id"])["status"] == "succeeded"
     finally:
         store.close()
@@ -241,7 +294,7 @@ def test_quiz_http_isolates_two_authenticated_users_and_survives_restart(databas
             assert queued.status_code == 202, queued.text
             job_id = queued.json()["job_id"]
             assert other.get(f"/api/courses/{course_id}/quiz-jobs/{job_id}").status_code == 404
-            process_quiz_job(store, ScriptedModel(), settings, store.claim_quiz_job())
+            process_quiz_job(store, ScriptedModel(), settings, claim_queued(store))
             result = owner.get(f"/api/courses/{course_id}/quiz-jobs/{job_id}").json()["result"]
             url = (
                 f"/api/courses/{course_id}/quizzes/{result['asset_id']}"

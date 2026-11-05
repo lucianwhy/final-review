@@ -1,8 +1,9 @@
 """Formal paper generation: bounded model calls and atomic draft publication."""
 
 import json
+import re
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from hashlib import sha256
 
 from pydantic import ValidationError
@@ -11,6 +12,7 @@ from .course_chat import CourseMaterials
 from .domain import DomainConflict, DomainNotFound, DomainService
 from .quiz_contract import (
     QuizDraftPlan,
+    QuizPaperReview,
     QuizSemanticReview,
     build_quiz_context,
     validate_quiz_draft,
@@ -74,9 +76,15 @@ def _batch_context(context, slots, previous):
     )
     # Rank whole, unmodified chunks; retain source diversity when no keyword matches.
     points = {s["knowledge_point"] for s in slots}
+    terms = set()
+    for point in points:
+        for term in re.findall(r"[A-Za-z][A-Za-z0-9_]+|[\u4e00-\u9fff]{2,}", point):
+            terms.add(term.casefold())
+            if not term.isascii():
+                terms.update(term[i : i + 2] for i in range(len(term) - 1))
     ranked = sorted(
         enumerate(context.evidence),
-        key=lambda pair: (-sum(p in pair[1].content for p in points), pair[0]),
+        key=lambda pair: (-sum(t in pair[1].content.casefold() for t in terms), pair[0]),
     )
     selected = [item for _, item in ranked[:24]]
     return context.model_copy(
@@ -108,7 +116,13 @@ def generate_quiz(
     from .llm import ModelOutputLimitError
 
     progress("retrieving")
-    context, coverage = quiz_context(store, config)
+    plan_context, coverage = quiz_context(store, config)
+    materials = CourseMaterials(store, config.course_id, config.user_id)
+    pool, _ = materials.read(
+        materials.select(config.source_document_ids, config.chapter), budget=600000
+    )
+    pool = [e for e in pool if e.source_type != "ai_supplement"][:1000]
+    context = build_quiz_context(store, config, [e.model_dump(mode="json") for e in pool])
     fingerprint = paper_hash(context.model_dump(mode="json"))
     state = json.loads(json.dumps(checkpoint)) if checkpoint else None
     if state and (state.get("version") != 1 or state.get("context_hash") != fingerprint):
@@ -117,7 +131,7 @@ def generate_quiz(
         progress("planning")
         audit, issues = [], []
         for repair in range(max_repairs + 1):
-            plan = model.quiz_draft_plan(context, issues=issues)
+            plan = model.quiz_draft_plan(plan_context, issues=issues)
             issues = validate_quiz_plan(context, plan)
             audit.append({"phase": "plan", "repair": repair, "issues": issues})
             if not issues:
@@ -130,22 +144,29 @@ def generate_quiz(
         total = Decimal(str(config.total_score if config.total_score is not None else count * 10))
         # Six decimal places also support unusually small positive totals without zero scores.
         unit = total / count
-        unit = unit.quantize(
-            Decimal("0.01") if total >= count * Decimal("0.01") else Decimal("0.000001")
-        )
-        if unit <= 0 or unit * (count - 1) >= total:
+        quantum = Decimal("0.01") if total >= count * Decimal("0.01") else Decimal("0.000001")
+        unit = unit.quantize(quantum, rounding=ROUND_DOWN)
+        if unit <= 0:
             raise QuizGenerationError("总分过小，无法为每道题分配正分值，请调整总分")
         slots, pending = [], []
+        assigned = Decimal("0")
         for allocation in plan["allocations"]:
             for _ in range(allocation["question_count"]):
                 order = len(slots) + 1
+                cumulative = (
+                    total
+                    if order == count
+                    else (total * order / count).quantize(quantum, rounding=ROUND_DOWN)
+                )
+                score = cumulative - assigned
+                assigned = cumulative
                 slots.append(
                     {
                         "id": f"q{order}",
                         "order": order,
                         "knowledge_point": allocation["knowledge_point"],
                         "question_type": allocation["question_type"],
-                        "score": float(total - unit * (count - 1) if order == count else unit),
+                        "score": float(score),
                         "allocation": allocation,
                     }
                 )
@@ -171,12 +192,19 @@ def generate_quiz(
             "audit": audit,
             "title": None,
             "batch_repairs": max_repairs - repair,
+            "read_chunk_ids": [e.chunk_id for e in plan_context.evidence],
         }
         save_checkpoint(state)
     previous = [q for batch in state["completed"] for q in batch["questions"]]
     while state["pending"]:
         slots = state["pending"][0]
         batch_context, batch_plan = _batch_context(context, slots, previous)
+        batch_context = batch_context.model_copy(
+            update={"repair_notes": state.get("paper_issues", [])}
+        )
+        state["read_chunk_ids"] = sorted(
+            set(state["read_chunk_ids"]) | {e.chunk_id for e in batch_context.evidence}
+        )
         try:
             generated = _generate_batch(
                 model,
@@ -188,15 +216,22 @@ def generate_quiz(
                 state["batch_repairs"],
                 progress,
             )
-        except ModelOutputLimitError:
+        except ModelOutputLimitError as exc:
             if len(slots) == 1:
                 raise QuizGenerationError(
                     "单题输出仍达到长度上限；已完成题目已保存，请调整输出预算后重试",
                     [{"code": "output_length", "question_id": slots[0]["id"]}],
+                    diagnostics=exc.diagnostics,
                 ) from None
             middle = len(slots) // 2
             state["pending"][:1] = [slots[:middle], slots[middle:]]
-            state["audit"].append({"phase": "split", "question_ids": [s["id"] for s in slots]})
+            state["audit"].append(
+                {
+                    "phase": "split",
+                    "question_ids": [s["id"] for s in slots],
+                    "diagnostics": exc.diagnostics,
+                }
+            )
             save_checkpoint(state)
             continue
         questions = generated["draft"]["questions"]
@@ -207,10 +242,13 @@ def generate_quiz(
         for question, slot in zip(questions, slots, strict=True):
             question.update(id=slot["id"], order=slot["order"])
         state["title"] = state["title"] or generated["draft"]["title"]
-        state["completed"].append({"questions": questions, "audit": generated["audit"]})
+        state["completed"].append(
+            {"questions": questions, "slots": slots, "audit": generated["audit"]}
+        )
         state["pending"].pop(0)
         previous.extend(questions)
         save_checkpoint(state)
+    previous.sort(key=lambda q: q["order"])
     progress("validating")
     # Strip server-derived fields before reusing the strict candidate schema.
     from .quiz_contract import QuizDraftQuestion
@@ -226,6 +264,54 @@ def generate_quiz(
             "整卷校验未通过，已完成批次保留",
             [i.model_dump(mode="json") for i in validation.issues],
         )
+    if len(state["completed"]) > 1 and hasattr(model, "review_quiz_paper"):
+        progress("reviewing")
+        try:
+            review = QuizPaperReview.model_validate(model.review_quiz_paper(context, candidate))
+        except ValidationError:
+            raise QuizGenerationError("整卷复核结果结构无效，请重试") from None
+        ids = {q["id"] for q in previous}
+        affected = set(review.affected_question_ids)
+        if not affected <= ids:
+            raise QuizGenerationError("整卷复核返回未知题目，请重试")
+        state["audit"].append({"phase": "paper_review", **review.model_dump(mode="json")})
+        if not review.supported:
+            invalid = [
+                b
+                for b in state["completed"]
+                if not affected or any(q["id"] in affected for q in b["questions"])
+            ]
+            state["completed"] = [b for b in state["completed"] if b not in invalid]
+            state["pending"] = sorted([b["slots"] for b in invalid], key=lambda b: b[0]["order"])
+            state["paper_issues"] = review.issues
+            state["paper_repairs"] = state.get("paper_repairs", 0) + 1
+            save_checkpoint(state)
+            if state["paper_repairs"] > max_repairs:
+                raise QuizGenerationError(
+                    "整卷复核未通过，修复次数已用完",
+                    [{"code": "paper_semantic", "message": i} for i in review.issues],
+                )
+            return generate_quiz(
+                store,
+                model,
+                config,
+                max_repairs=max_repairs,
+                progress=progress,
+                checkpoint=state,
+                save_checkpoint=save_checkpoint,
+                choice_batch_size=choice_batch_size,
+                written_batch_size=written_batch_size,
+            )
+        save_checkpoint(state)
+    read_ids = set(state["read_chunk_ids"])
+    coverage.update(
+        read_chunks=len(read_ids),
+        partial=len(read_ids) < coverage["available_chunks"],
+        read_document_ids=sorted(
+            {e.document_id for e in context.evidence if e.chunk_id in read_ids}
+        ),
+        eligible_chunks=len(context.evidence),
+    )
     return {
         "context": context,
         "plan": state["plan"],
@@ -445,6 +531,7 @@ def read_quiz(store, user_id, course_id, asset_id, revision_id):
     ):
         raise DomainNotFound(revision_id)
     questions = []
+    pending_review = set(payload.get("pending_semantic_review_question_ids", []))
     for slot in payload["questions"]:
         question = domain._owned("question_revision", slot["question_revision_id"])
         if question["quiz_revision_id"] != revision_id or question["course_id"] != course_id:
@@ -461,4 +548,11 @@ def read_quiz(store, user_id, course_id, asset_id, revision_id):
                     for c in store.list_material_chunks(ref["document_id"])
                 )
             )
+        if slot["question_revision_id"] in pending_review:
+            # Keep submitted references available to the future editor without
+            # presenting them as verified sources for changed draft content.
+            questions[-1]["candidate_references"] = questions[-1]["references"]
+            questions[-1]["references"] = []
+            questions[-1]["source_label"] = "来源待复核"
+            questions[-1]["source_review_status"] = "pending"
     return {"asset": asset, "revision": {**payload, "questions": questions}}

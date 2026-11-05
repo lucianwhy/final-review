@@ -38,6 +38,11 @@ class PostgresStore:
         "checkpoint": "checkpoints",
         "pending_write": "pending_writes",
         "attempt": "attempts",
+        "attempt_answer": "attempt_answers",
+        "question_grade": "question_grades",
+        "mistake": "mistakes",
+        "mastery_observation": "mastery_observations",
+        "mistake_practice": "mistake_practices",
         "learning_event": "learning_events",
         "fast_quiz_session": "fast_quiz_sessions",
         "exam": "exams",
@@ -172,7 +177,21 @@ class PostgresStore:
                 ["status", "archived_at", "deleted_at", "purge_after", "deletion_confirmed_at"]
             )
         if table == "attempt":
-            names.extend(["legacy_session_id", "quiz_revision_id"])
+            names.extend(
+                [
+                    "legacy_session_id",
+                    "quiz_revision_id",
+                    "grading_snapshot",
+                    "model_version",
+                    "grading_disclaimer_version",
+                ]
+            )
+        if table in {"attempt_answer", "question_grade"}:
+            names.extend(["attempt_id", "question_revision_id"])
+        if table == "mistake":
+            names.extend(["attempt_id", "question_revision_id"])
+        if table in {"mastery_observation", "mistake_practice"}:
+            names.append("mistake_id")
         if table == "learning_asset":
             names.extend(["asset_id", "current_revision_id"])
         if table == "asset_revision":
@@ -202,7 +221,15 @@ class PostgresStore:
         user_id = self._user()
         columns = self._columns(table, data)
         names = ["record_key", "user_id", *columns, "data"]
-        values = [key, user_id, *columns.values(), Jsonb(data)]
+        values = [
+            key,
+            user_id,
+            *(
+                Jsonb(value) if name == "grading_snapshot" and value is not None else value
+                for name, value in columns.items()
+            ),
+            Jsonb(data),
+        ]
         update = [
             f"{name} = EXCLUDED.{name}" for name in names if name not in {"record_key", "user_id"}
         ]
@@ -616,8 +643,10 @@ class PostgresStore:
         with self.transaction(), self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT record_key,user_id,data FROM quiz_jobs WHERE "
-                "(data->>'status'='queued' AND (data->>'available_at')::timestamptz<=now()) "
-                "OR (data->>'status'='running' AND (data->>'lease_until')::timestamptz<now()) "
+                "(data->>'status'='queued' AND "
+                "(data->>'available_at')::timestamptz<=clock_timestamp()) "
+                "OR (data->>'status'='running' AND "
+                "(data->>'lease_until')::timestamptz<clock_timestamp()) "
                 "ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1"
             )
             row = cursor.fetchone()

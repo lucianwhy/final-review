@@ -16,13 +16,19 @@ from .schemas import Evidence, MaterialInput
 from .storage import Store, stable_key
 
 EMBEDDING_BATCH_SIZE = 10
+INVALID_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _strip_invalid_controls(text: str) -> str:
+    """Remove extraction artifacts that PostgreSQL text/JSON cannot store."""
+    return INVALID_CONTROL_CHARS.sub("", text)
 
 
 def clean_markdown(text: str) -> str:
     # Preserve equations, code blocks, headings and repeated steps. Deduplication is
     # performed on whole chunks below, avoiding accidental deletion of proof steps.
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\ufeff", "")
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
+    text = _strip_invalid_controls(text)
     text = re.sub(r"[ \t]+\n", "\n", text)
     if text.count("\ufffd") > max(3, len(text) // 100):
         raise ValueError("资料乱码过多，请重新转换或提供可读 Markdown")
@@ -96,9 +102,8 @@ class KnowledgeBase:
     ) -> tuple[dict, list[dict]]:
         if stage_callback:
             stage_callback("clean")
-        cleaned = clean_markdown(
-            material.markdown if plain_text else plain_material_text(material.markdown)
-        )
+        markdown = _strip_invalid_controls(material.markdown)
+        cleaned = clean_markdown(markdown if plain_text else plain_material_text(markdown))
         document_id = material.document_id or stable_key(
             material.course_id,
             material.title,
@@ -176,7 +181,7 @@ class KnowledgeBase:
                 **metadata,
                 "document_id": document_id,
                 "source_origin": source_origin,
-                "markdown": material.markdown,
+                "markdown": markdown,
                 "cleaned_markdown": cleaned,
                 "chunk_count": len(chunks),
             },

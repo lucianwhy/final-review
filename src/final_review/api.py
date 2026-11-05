@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import (
@@ -37,12 +38,34 @@ from .exports import (
     public_export,
     read_export,
 )
+from .formal_attempt import (
+    list_formal_attempts,
+    read_formal_attempt,
+    save_formal_answer,
+    start_formal_attempt,
+    submit_formal_attempt,
+)
+from .formal_grading import grade_formal_attempt
+from .formal_result import ask_quiz_followup, read_formal_result
 from .llm import ModelError, build_fast_quiz_model, build_models, build_review_model
 from .material_conversion import SUPPORTED_SUFFIXES
+from .mistakes import (
+    list_mistakes,
+    list_practices,
+    mark_mastery,
+    read_mistake,
+    read_practice,
+    start_practice,
+    submit_practice,
+)
 from .postgres import PostgresStore
 from .quiz_config import merge_quiz_input, resolve_quiz_config
+from .quiz_edit import save_quiz_revision
+from .quiz_edit_contract import QuizRevisionEdit
 from .quiz_generation import read_quiz
 from .quiz_jobs import enqueue_quiz, owned_job, public_quiz_job, retry_quiz
+from .quiz_print import print_quiz_revision
+from .quiz_review import confirm_quiz_revision, quiz_confirm_preview, review_quiz_revision
 from .rag import KnowledgeBase
 from .rendering import render_markdown
 from .schemas import (
@@ -64,15 +87,20 @@ from .schemas import (
     ExamUpdate,
     FastQuizRequest,
     FastQuizSubmission,
+    FormalAnswerSave,
     Identifier,
+    MasteryMark,
     MaterialDelete,
     MaterialInput,
     MaterialUpdate,
+    MistakePracticeAnswer,
     NoteConfirm,
     NoteConfirmPreview,
     NoteExportCreate,
     NoteRevisionEdit,
     QuizConfigRequest,
+    QuizConfirm,
+    QuizFollowUpRequest,
     QuizInput,
     QuizJobRequest,
     ResumeNoteRequest,
@@ -744,6 +772,7 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             },
         ]
         for _ in range(2):
+            completion = None
             try:
                 completion = client.chat.completions.create(
                     model=selected.model,
@@ -756,14 +785,22 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
                     ),
                     **(
                         {"response_format": {"type": "json_object"}}
-                        if selected.base_url.rstrip("/") == "https://api.deepseek.com"
+                        if selected.base_url.rstrip("/")
+                        in {"https://api.deepseek.com", "https://api.siliconflow.cn/v1"}
                         else {}
                     ),
                 )
                 content = (completion.choices[0].message.content or "").strip()
                 return parse_chat_decision(content)
             except ValidationError as exc:
-                errors = [{"field": error["loc"], "type": error["type"]} for error in exc.errors()]
+                errors = [
+                    {
+                        "field": error["loc"],
+                        "type": error["type"],
+                        "input_type": type(error.get("input")).__name__,
+                    }
+                    for error in exc.errors()
+                ]
                 logger.warning("Chat decision schema validation failed: %s", errors)
                 messages.append(
                     {
@@ -774,7 +811,13 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
                     }
                 )
             except (ValueError, KeyError, IndexError, TypeError, AttributeError):
-                logger.warning("Chat decision was not valid JSON")
+                choices = getattr(completion, "choices", None) or []
+                choice = choices[0] if choices else None
+                logger.warning(
+                    "Chat decision was not valid JSON: finish_reason=%s content_length=%s",
+                    getattr(choice, "finish_reason", None),
+                    len(getattr(getattr(choice, "message", None), "content", "") or ""),
+                )
             except OpenAIError:
                 logger.warning("Chat intent classification provider failed", exc_info=True)
             messages.append(
@@ -2094,6 +2137,72 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             )
         }
 
+    @app.post(
+        "/api/courses/{course_id}/quizzes/{asset_id}/revisions",
+        dependencies=[Depends(authorize)],
+    )
+    def edit_quiz_revision(
+        course_id: Identifier,
+        asset_id: Identifier,
+        request: QuizRevisionEdit,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return save_quiz_revision(conversation_store(), user.id, course_id, asset_id, request)
+
+    @app.post(
+        "/api/courses/{course_id}/quizzes/{asset_id}/revisions/{revision_id}/review",
+        dependencies=[Depends(authorize)],
+    )
+    def review_edited_quiz(
+        course_id: Identifier,
+        asset_id: Identifier,
+        revision_id: Identifier,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        store = conversation_store()
+        paper = read_quiz(store, user.id, course_id, asset_id, revision_id)
+        model_id = paper["revision"].get("model_id")
+        reviewer = runtime(None if local_test_mode else model_id).model
+        return review_quiz_revision(
+            store, user.id, course_id, asset_id, revision_id, reviewer, model_id or "default"
+        )
+
+    @app.post(
+        "/api/courses/{course_id}/quizzes/{asset_id}/revisions/{revision_id}/confirm-preview",
+        dependencies=[Depends(authorize)],
+    )
+    def preview_quiz_confirmation(
+        course_id: Identifier,
+        asset_id: Identifier,
+        revision_id: Identifier,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return quiz_confirm_preview(conversation_store(), user.id, course_id, asset_id, revision_id)
+
+    @app.post(
+        "/api/courses/{course_id}/quizzes/{asset_id}/revisions/{revision_id}/confirm",
+        dependencies=[Depends(authorize)],
+    )
+    def confirm_edited_quiz(
+        course_id: Identifier,
+        asset_id: Identifier,
+        revision_id: Identifier,
+        request: QuizConfirm,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return confirm_quiz_revision(
+            conversation_store(),
+            user.id,
+            course_id,
+            asset_id,
+            revision_id,
+            request.confirmation_id,
+        )
+
     @app.get(
         "/api/courses/{course_id}/quizzes/{asset_id}/revisions/{revision_id}",
         dependencies=[Depends(authorize)],
@@ -2106,6 +2215,242 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
     ):
         require_course(course_id, user)
         return read_quiz(conversation_store(), user.id, course_id, asset_id, revision_id)
+
+    @app.get(
+        "/api/courses/{course_id}/quizzes/{asset_id}/revisions/{revision_id}/print",
+        dependencies=[Depends(authorize)],
+    )
+    def get_quiz_print(
+        course_id: Identifier,
+        asset_id: Identifier,
+        revision_id: Identifier,
+        variant: Literal["questions", "answers"],
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return print_quiz_revision(
+            conversation_store(), user.id, course_id, asset_id, revision_id, variant
+        )
+
+    @app.post(
+        "/api/courses/{course_id}/quizzes/{asset_id}/attempts",
+        dependencies=[Depends(authorize)],
+    )
+    def start_quiz_attempt(
+        course_id: Identifier, asset_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return start_formal_attempt(conversation_store(), user.id, course_id, asset_id)
+
+    @app.get(
+        "/api/courses/{course_id}/formal-attempts",
+        dependencies=[Depends(authorize)],
+    )
+    def list_quiz_attempts(course_id: Identifier, user: CurrentUser = Depends(authorize)):
+        require_course(course_id, user)
+        return list_formal_attempts(conversation_store(), user.id, course_id)
+
+    @app.get(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}",
+        dependencies=[Depends(authorize)],
+    )
+    def get_quiz_attempt(
+        course_id: Identifier, attempt_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return read_formal_attempt(conversation_store(), user.id, course_id, attempt_id)
+
+    @app.put(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}/answers",
+        dependencies=[Depends(authorize)],
+    )
+    def save_quiz_answer(
+        course_id: Identifier,
+        attempt_id: Identifier,
+        request: FormalAnswerSave,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return save_formal_answer(
+            conversation_store(),
+            user.id,
+            course_id,
+            attempt_id,
+            request.question_revision_id,
+            request.answer,
+            request.expected_version,
+        )
+
+    @app.post(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}/submit",
+        dependencies=[Depends(authorize)],
+    )
+    def submit_quiz_attempt(
+        course_id: Identifier, attempt_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        submitted = submit_formal_attempt(conversation_store(), user.id, course_id, attempt_id)
+        try:
+            return grade_attempt(course_id, attempt_id, user)
+        except (DomainConflict, ModelError, ValueError):
+            return {**submitted, "grading_error": "作答已提交，评分暂未完成，请稍后重试"}
+
+    def model_for_attempt(course_id, attempt_id, user):
+        store = conversation_store()
+        detail = read_formal_attempt(store, user.id, course_id, attempt_id)
+        payload = store.get("quiz_revision_payload", detail["attempt"]["quiz_revision_id"])
+        model_id = payload.get("model_id")
+        reviewer = (
+            runtime().model
+            if local_test_mode
+            else (app.state.agents[model_id].model if model_id in app.state.agents else None)
+        )
+        try:
+            model_version = settings.get_chat_model(model_id).model
+        except ValueError:
+            model_version = model_id or "unavailable"
+        return reviewer, model_id, model_version
+
+    def grade_attempt(course_id, attempt_id, user):
+        reviewer, model_id, model_version = model_for_attempt(course_id, attempt_id, user)
+        return grade_formal_attempt(
+            conversation_store(), user.id, course_id, attempt_id, reviewer, model_id, model_version
+        )
+
+    @app.post(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}/grade",
+        dependencies=[Depends(authorize)],
+    )
+    def grade_quiz_attempt(
+        course_id: Identifier, attempt_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return grade_attempt(course_id, attempt_id, user)
+
+    @app.get(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}/result",
+        dependencies=[Depends(authorize)],
+    )
+    def get_quiz_result(
+        course_id: Identifier, attempt_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return read_formal_result(conversation_store(), user.id, course_id, attempt_id)
+
+    @app.get("/api/mistakes", dependencies=[Depends(authorize)])
+    def get_mistakes(
+        course_id: str | None = None,
+        exam_id: str | None = None,
+        chapter: str | None = None,
+        knowledge_point: str | None = None,
+        question_type: str | None = None,
+        mastery_status: str | None = None,
+        user: CurrentUser = Depends(authorize),
+    ):
+        if course_id:
+            require_course(course_id, user)
+        return list_mistakes(
+            conversation_store(),
+            user.id,
+            course_id=course_id,
+            exam_id=exam_id,
+            chapter=chapter,
+            knowledge_point=knowledge_point,
+            question_type=question_type,
+            mastery_status=mastery_status,
+        )
+
+    @app.get("/api/courses/{course_id}/mistakes/{mistake_id}", dependencies=[Depends(authorize)])
+    def get_mistake(
+        course_id: Identifier, mistake_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return read_mistake(conversation_store(), user.id, course_id, mistake_id)
+
+    @app.put(
+        "/api/courses/{course_id}/mistakes/{mistake_id}/mastery", dependencies=[Depends(authorize)]
+    )
+    def put_mastery(
+        course_id: Identifier,
+        mistake_id: Identifier,
+        request: MasteryMark,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return mark_mastery(conversation_store(), user.id, course_id, mistake_id, request.status)
+
+    @app.post(
+        "/api/courses/{course_id}/mistakes/{mistake_id}/practices",
+        dependencies=[Depends(authorize)],
+    )
+    def create_mistake_practice(
+        course_id: Identifier, mistake_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return start_practice(conversation_store(), user.id, course_id, mistake_id)
+
+    @app.get(
+        "/api/courses/{course_id}/mistakes/{mistake_id}/practices",
+        dependencies=[Depends(authorize)],
+    )
+    def get_mistake_practices(
+        course_id: Identifier, mistake_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return list_practices(conversation_store(), user.id, course_id, mistake_id)
+
+    @app.get(
+        "/api/courses/{course_id}/mistake-practices/{practice_id}",
+        dependencies=[Depends(authorize)],
+    )
+    def get_mistake_practice(
+        course_id: Identifier, practice_id: Identifier, user: CurrentUser = Depends(authorize)
+    ):
+        require_course(course_id, user)
+        return read_practice(conversation_store(), user.id, course_id, practice_id)
+
+    @app.post(
+        "/api/courses/{course_id}/mistake-practices/{practice_id}/submit",
+        dependencies=[Depends(authorize)],
+    )
+    def submit_mistake_practice(
+        course_id: Identifier,
+        practice_id: Identifier,
+        request: MistakePracticeAnswer,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        return submit_practice(
+            conversation_store(), user.id, course_id, practice_id, request.answer
+        )
+
+    @app.post(
+        "/api/courses/{course_id}/formal-attempts/{attempt_id}/result/"
+        "questions/{question_revision_id}/follow-up",
+        dependencies=[Depends(authorize)],
+    )
+    def follow_up_quiz_result(
+        course_id: Identifier,
+        attempt_id: Identifier,
+        question_revision_id: Identifier,
+        request: QuizFollowUpRequest,
+        user: CurrentUser = Depends(authorize),
+    ):
+        require_course(course_id, user)
+        reviewer, model_id, model_version = model_for_attempt(course_id, attempt_id, user)
+        if reviewer is None:
+            raise HTTPException(503, "追问模型暂不可用")
+        return ask_quiz_followup(
+            conversation_store(),
+            user.id,
+            course_id,
+            attempt_id,
+            question_revision_id,
+            request.message,
+            reviewer,
+            model_id,
+            model_version,
+        )
 
     def check_note_chat_scope(course_id, conversation_id, note_input, user):
         conversation = note_conversation(course_id, conversation_id, user)

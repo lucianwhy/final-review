@@ -50,7 +50,7 @@ test("model-driven quiz dialog prefills, restores, validates, saves and cancels"
   await picker.getByRole("checkbox", { name: /TCP 讲义/ }).check();
   await picker.getByRole("button", { name: /确认选择/ }).click();
   await expect(dialog.getByRole("spinbutton", { name: "选择题", exact: true })).toHaveValue("8");
-  await dialog.getByRole("spinbutton", { name: "选择题", exact: true }).fill("36");
+  await dialog.getByRole("spinbutton", { name: "选择题", exact: true }).fill("101");
   await expect(dialog.getByRole("button", { name: "确认试题配置" })).toBeDisabled();
   await dialog.getByRole("spinbutton", { name: "选择题", exact: true }).fill("8");
   await dialog.getByRole("textbox", { name: "重点 · 可选" }).fill("握手");
