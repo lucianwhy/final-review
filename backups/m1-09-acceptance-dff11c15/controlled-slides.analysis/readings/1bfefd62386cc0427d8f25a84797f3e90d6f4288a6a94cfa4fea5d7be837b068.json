@@ -1,0 +1,1 @@
+{"kind": "knowledge", "title": "需要核对的页面", "blocks": [], "uncertainties": ["模型输出格式不完整或无法解析，请修正结构：核验结果缺少、重复或引用未知知识块"], "quality": "review_needed", "issues": ["模型输出格式不完整或无法解析，请修正结构：核验结果缺少、重复或引用未知知识块"], "pipeline": "visual-slides-v1", "model": "qwen3-vl-plus", "raw_native": "目录\n1. HTTP 会话\n2. Servlet 请求处理", "raw_extracted": "目录\n1. HTTP 会话\n2. Servlet 请求处理"}

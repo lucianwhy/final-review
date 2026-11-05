@@ -1,0 +1,8 @@
+Starting m109-broken
+Completed m109-broken exit 1
+Traceback (most recent call last):
+  File "D:\final_review\final-review\scripts\rebuild_course_materials.py", line 72, in <module>
+    main()
+  File "D:\final_review\final-review\scripts\rebuild_course_materials.py", line 67, in main
+    raise RuntimeError(f"Failed rebuilds (previous versions preserved): {failures}")
+RuntimeError: Failed rebuilds (previous versions preserved): ['m109-broken']

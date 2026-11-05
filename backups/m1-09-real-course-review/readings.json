@@ -1,0 +1,79 @@
+[
+  {
+    "kind": "knowledge",
+    "title": "结构特点",
+    "blocks": [
+      {
+        "title": "BS模式（Browser/Server，浏览器/服务器模式）",
+        "text": "BS:(Browser/Server, 浏览器/服务器模式), web应用可以实现跨平台，客户端零维护，响应速度依赖服务器性能及网络带宽。"
+      },
+      {
+        "title": "CS模式（Client/Server，客户端/服务器模式）",
+        "text": "CS:(Client/Server, 客户端/服务器模式), 桌面级应用，响应速度快，安全性强，个性化能力强，响应数据较快。"
+      }
+    ],
+    "uncertainties": [],
+    "quality": "verified",
+    "issues": [],
+    "review": {
+      "faithful": true,
+      "complete": true,
+      "readable": true,
+      "issues": []
+    },
+    "pipeline": "visual-slides-v1",
+    "model": "qwen3-vl-plus",
+    "raw_native": "结构特点\nBS:(Browser/Server,浏览器/服务器模式),web应用 可以实现跨平台，客户端零维护，响应速度依赖服务器性能及网络带宽。\nCS:(Client/Server,客户端/服务器模式),桌面级应用，响应速度快，安全性强，个性化能力强，响应数据较快。",
+    "raw_extracted": "结构特点\nBS:(Browser/Server,浏览器/服务器模式),web应用 可以实现跨平台，客户端零维护，响应速度依赖服务器性能及网络带宽。\n\nCS:(Client/Server,客户端/服务器模式),桌面级应用，响应速度快，安全性强，个性化能力强，响应数据较快。"
+  },
+  {
+    "kind": "knowledge",
+    "title": "网络分层模型",
+    "blocks": [
+      {
+        "title": "OSI七层模型结构与功能",
+        "text": "1 物理层（Physical Layer）：负责传输比特流，处理物理接口和介质，例如网线、光纤等。\n2 数据链路层（Data Link Layer）：处理帧的传输，进行物理地址寻址（MAC地址），并进行错误检测和纠正。\n3 网络层（Network Layer）：负责数据包的路由和转发，处理逻辑地址（IP地址）。\n4 传输层（Transport Layer）：提供端到端的通信控制，主要负责数据的分段和重组，为上层应用提供可靠的数据传输。\n5 会话层（Session Layer）：管理会话的建立、维护和结束，负责建立不同应用程序之间的通信。\n6 表示层（Presentation Layer）：负责数据的格式化、加密和解密，确保数据能够被正确解释。\n7 应用层（Application Layer）：提供用户应用程序直接使用的网络服务，例如HTTP、SMTP、FTP等。"
+      },
+      {
+        "title": "传输层协议对比：TCP 与 UDP",
+        "text": "TCP 是一个有状态的协议，需要先与对方建立连接然后才能发送数据，而且保证数据不丢失不重复。而 UDP 则比较简单，它无状态，不用事先建立连接就可以任意发送数据，但不保证数据一定会发到对方。两个协议的另一个重要区别在于数据的形式：TCP 的数据是连续的“字节流”，有先后顺序；而 UDP 则是分散的小数据包，是顺序发，乱序收。\n传输层：负责端到端的通信，传输单位为报文段或用户数据报。"
+      }
+    ],
+    "uncertainties": [],
+    "quality": "verified",
+    "issues": [],
+    "review": {
+      "faithful": true,
+      "complete": true,
+      "readable": true,
+      "issues": []
+    },
+    "pipeline": "visual-slides-v1",
+    "model": "qwen3-vl-plus",
+    "raw_native": "网络分层模型",
+    "raw_extracted": "网络分层模型\n\n\n\n\n\n### Notes:\nTCP 是一个有状态的协议，需要先与对方建立连接然后才能发送数据，而且保证数据不丢失不重复。而 UDP 则比较简单，它无状态，不用事先建立连接就可以任意发送数据，但不保证数据一定会发到对方。两个协议的另一个重要区别在于数据的形式。TCP 的数据是连续的“字节流”，有先后顺序，而 UDP 则是分散的小数据包，是顺序发，乱序收\n传输层：负责端到端的通信，传输单位为报文段或用户数据报\nOSI七层模型：物理层(网线、光纤，比特流)，数据链路层(mac，帧)，网络层(IP)，传输层，会话层，表示层(加解密)，应用层"
+  },
+  {
+    "kind": "knowledge",
+    "title": "TCP建立连接过程",
+    "blocks": [
+      {
+        "title": "三次握手建立TCP连接的状态变迁与报文交互",
+        "text": "客户端（A）主动打开连接，服务器（B）被动打开连接。\n\n1. 客户端从 CLOSED 状态发送 SYN=1, seq=x 报文，进入 SYN-SENT 状态；\n2. 服务器在 LISTEN 状态下收到 SYN 报文后，回复 SYN=1, ACK=1, seq=y, ack=x+1 报文，进入 SYN-RCVD 状态；\n3. 客户端收到后发送 ACK=1, seq=x+1, ack=y+1 报文，双方均进入 ESTABLISHED 状态，开始数据传送。"
+      }
+    ],
+    "uncertainties": [],
+    "quality": "verified",
+    "issues": [],
+    "review": {
+      "faithful": true,
+      "complete": true,
+      "readable": true,
+      "issues": []
+    },
+    "pipeline": "visual-slides-v1",
+    "model": "qwen3-vl-plus",
+    "raw_native": "TCP建立连接过程",
+    "raw_extracted": "TCP建立连接过程"
+  }
+]

@@ -1,0 +1,33 @@
+.mistakes-page { max-width: 1120px; margin: 0 auto; padding: 28px 28px 80px; color: #1d3444; }
+.mistakes-page h1 { margin: 0 0 8px; font-size: 29px; }
+.mistakes-page header p { color: #607585; margin: 0 0 25px; }
+.mistake-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; background: #f5f8f8; border: 1px solid #e3eaeb; border-radius: 12px; padding: 18px; }
+.mistake-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.mistake-filters select { width: 100%; border: 1px solid #cedbdd; border-radius: 7px; background: white; color: #1d3444; padding: 9px; font: inherit; }
+.mistake-summary { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 12px; color: #526c7b; }
+.mistake-summary button, .mistake-actions button, .mistake-practice button, .mistake-history button { border: 1px solid #adc5cc; border-radius: 7px; background: white; color: #123c5c; padding: 8px 13px; cursor: pointer; font: inherit; }
+.mistake-summary button:hover, .mistake-actions button:hover, .mistake-history button:hover { background: #eaf3f4; }
+.mistake-actions button:nth-child(2), .mistake-practice > button { background: #123c5c; color: white; }
+.mistake-actions button:disabled, .mistake-practice button:disabled { opacity: .5; cursor: default; }
+.mistake-list { display: grid; gap: 15px; }
+.mistake-card { border: 1px solid #dce6e7; border-radius: 12px; background: white; padding: 20px; box-shadow: 0 4px 18px #123c5c0a; }
+.mistake-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #56707d; font-size: 12px; }
+.mistake-meta span { background: #eef5f5; border-radius: 20px; padding: 3px 8px; }
+.mistake-card h2 { font-size: 18px; margin: 16px 0 7px; line-height: 1.5; }
+.mistake-card h2 p { margin: 0; }
+.mistake-card > p { color: #607585; }
+.mistake-card details { padding: 10px 0; border-top: 1px solid #e7eded; }
+.mistake-card summary { cursor: pointer; color: #123c5c; font-weight: 600; }
+.mistake-card blockquote { margin: 8px 0; padding-left: 12px; border-left: 3px solid #b6cfd1; color: #48616d; }
+.mistake-card small { display: block; overflow-wrap: anywhere; color: #738995; }
+.mistake-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.mistake-history { margin-top: 15px; padding: 12px; background: #f6f9f9; border-radius: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.mistake-empty { text-align: center; padding: 50px 20px; background: #f7faf9; border-radius: 12px; color: #607585; }
+.mistake-error { color: #a12828; background: #fff2f0; padding: 10px; border-radius: 7px; }
+.mistake-practice { display: grid; gap: 12px; }
+.mistake-practice > p { margin: 0; overflow-wrap: anywhere; color: #607585; }
+.mistake-practice label { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border: 1px solid #e0e7e8; border-radius: 6px; }
+.mistake-practice textarea { width: 100%; border: 1px solid #bdcdd2; border-radius: 7px; padding: 9px; font: inherit; resize: vertical; }
+.mistake-practice-result { padding: 13px; background: #f1f7f4; border-radius: 8px; }
+@media(max-width: 760px) { .mistakes-page { padding: 18px 15px 95px; } .mistake-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; } .mistake-card { padding: 15px; } }
+@media(max-width: 480px) { .mistake-filters { grid-template-columns: 1fr; } .mistake-actions button { flex: 1 1 auto; } }

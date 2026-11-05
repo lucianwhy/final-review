@@ -1,0 +1,47 @@
+{
+  "database": "isolated disposable PostgreSQL",
+  "checks": [
+    "owner registration",
+    "second user registration",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 --publish exit=2",
+    "partial publish leaves document unchanged",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 exit=0",
+    "preview candidate keeps old index",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --publish exit=0"
+  ],
+  "vision_model": "qwen3-vl-plus",
+  "fixtures": "controlled real PPTX",
+  "pages": [
+    {
+      "kind": "navigation",
+      "title": "目录",
+      "issues": [],
+      "quality": "verified",
+      "position": 1
+    },
+    {
+      "kind": "knowledge",
+      "title": "HTTP 会话：图片知识页",
+      "issues": [],
+      "quality": "verified",
+      "position": 2
+    },
+    {
+      "kind": "knowledge",
+      "title": "Servlet 请求处理",
+      "issues": [
+        "图片底部独立一行 'GET 用于读取资源，POST 用于提交数据。' 字体颜色为深灰（与上方黑色主体文字不同），视觉上分离，疑似补充说明或另页内容；原生文字与 extracted_text_and_notes 均未包含该句，来源存疑，需核对是否属于本页内容。",
+        "候选中新增了原生文字与提取文本均未包含的条目 'HTTP 方法语义：GET 用于读取资源，POST 用于提交数据。'；该内容虽出现在图片底部，但字体颜色为深灰、视觉上独立成行，且原生文字与 extracted_text_and_notes 均未收录，属于无来源添加，构成实质失实。",
+        "教师备注 '参数名 name 区分大小写' 被合并进 '参数读取' 块中，虽合理整理，但原生文字与 extracted_text_and_notes 中该备注是独立于主干的 '### Notes'，模型将其内嵌为正文一部分，弱化了其备注属性，属信息关系误置（虽非严重错误，但结合新增内容，整体忠实度受损）。",
+        "原生文字与图片主体内容一致，共三句核心内容；候选却拆分为四块，其中第四块无原始依据，导致内容不完整（遗漏对‘来源存疑’的标注处理）且不忠实。"
+      ],
+      "quality": "review_needed",
+      "position": 3
+    }
+  ],
+  "cleaned_text": "Cookie 与 Session 的存储位置\n\nCookie 保存在客户端。\nSession 状态保存在服务端。\n\nHTTP 协议特性\n\nHTTP 是无状态协议。",
+  "status": "failed",
+  "failure_type": "AssertionError",
+  "database_removed": true,
+  "seconds": 123.7
+}

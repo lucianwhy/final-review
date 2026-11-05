@@ -1,0 +1,259 @@
+{
+  "model": "deepseek",
+  "samples": [
+    {
+      "case": "course",
+      "message": "你知道当前是什么课程吗？",
+      "status": 200,
+      "result": {
+        "kind": "chat",
+        "intent": "ask",
+        "reply": "当前课程是《Web服务端技术原理及应用》，学科：学科未填写。",
+        "model": "DeepSeek",
+        "citations": []
+      }
+    },
+    {
+      "case": "statistics",
+      "message": "现在你的知识库里面有多少文本？",
+      "status": 200,
+      "result": {
+        "kind": "chat",
+        "intent": "ask",
+        "reply": "当前课程共有 2 份资料，其中 2 份可检索。\n可检索文本共 224 个非空白字符，2 个资料片段。\n排队中 0 份，处理中 0 份，失败 0 份。\n字数按清洗后的可检索文本统计，不重复累加片段重叠部分。",
+        "model": "DeepSeek",
+        "citations": []
+      }
+    },
+    {
+      "case": "analysis",
+      "message": "我总是记混Cookie和Session，你觉得我应该怎么理解，帮我分析一下。",
+      "status": 200,
+      "result": {
+        "kind": "chat",
+        "intent": "ask",
+        "reply": "可以用一句话抓住核心区别：**Cookie 存在客户端，Session 状态通常保存在服务端**[资料1]。\n\n进一步理解：\n\n- **Cookie 是\"客户端侧的存储/传递机制\"**：服务端把一些信息发给浏览器，浏览器保存下来，之后的请求再带上。它本身只是数据的载体[资料1]。\n- **Session 是\"服务端侧的状态\"**：用户的状态信息通常放在服务端保存，服务端通过一个标识（常见做法就是借助 Cookie 传 session id）把不同请求关联到同一个用户会话[资料1]。\n\n一个帮你记混的类比（这是分析建议，不是资料原文）：把 Cookie 想成你手里的\"会员卡\"，Session 想成店里的\"会员档案柜\"。卡在你手上装着卡号，真正的消费记录在店里。\n\n配合 HTTP 的一个特点会更好记：**HTTP 是无状态协议，每次请求独立处理**[资料1]。正因为每次请求互相独立，服务端才需要 Session 这类机制来\"记住\"你是谁——这是理解两者为什么同时存在、为什么常常搭配使用的关键。\n\n回到易混点，最容易错的是\"谁都存在哪里\"：Cookie → 客户端；Session → 服务端。记牢这一条，大部分混淆就解决了。\n\n如果你愿意，可以自己造一个具体场景（比如登录后购物车）走一遍数据流向，这样比死记定义更牢固。",
+        "model": "DeepSeek",
+        "citations": [
+          {
+            "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+            "chunk_ordinal": 0,
+            "document_id": "web-http",
+            "title": "HTTP课件.md",
+            "file_name": "HTTP课件.md",
+            "citation_number": 1,
+            "course_id": "a5c1671cc45d2ddb6c0c",
+            "chapter": "HTTP",
+            "source_type": "teacher_ppt",
+            "content": "HTTP\nHTTP是应用层协议。HTTP是无状态协议，每次请求独立处理。\nGET用于读取资源，POST用于提交数据。状态码200表示成功，404表示资源未找到，500表示服务端内部错误。Cookie保存在客户端，Session状态通常保存在服务端。\nHTTPS使用TLS保护传输过程。HTTP请求包含方法、路径、请求头和可选的请求体。",
+            "position_kind": "document",
+            "position": null,
+            "text_start": 0,
+            "text_end": 167,
+            "similarity": 1.0000000000000002,
+            "rank_score": 1.12
+          }
+        ]
+      }
+    },
+    {
+      "case": "file_scope",
+      "message": "只根据HTTP课件.md解释HTTP为什么说是无状态协议。",
+      "status": 200,
+      "result": {
+        "kind": "chat",
+        "intent": "ask",
+        "reply": "根据 HTTP课件.md：\n\n**HTTP 是无状态协议，因为每次请求独立处理**[资料1]。\n\n课件里只给到这一句直接依据，没有进一步展开\"为什么独立处理就等于无状态\"的机制性说明。可以明确的是：它的无状态性体现在请求与请求之间默认不保留彼此的处理关联，每个请求单独处理[资料1]。\n\n（关于\"正因为无状态，才有 Cookie/Session 等机制来补充状态\"这一点，课件在同一份资料中提到 Cookie 保存在客户端、Session 状态通常在服务端[资料1]，但没有明确把它写成\"无状态导致需要它们\"的因果句，这里不做超出资料的断定。）",
+        "model": "DeepSeek",
+        "citations": [
+          {
+            "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+            "chunk_ordinal": 0,
+            "document_id": "web-http",
+            "title": "HTTP课件.md",
+            "file_name": "HTTP课件.md",
+            "citation_number": 1,
+            "course_id": "a5c1671cc45d2ddb6c0c",
+            "chapter": "HTTP",
+            "source_type": "teacher_ppt",
+            "content": "HTTP\nHTTP是应用层协议。HTTP是无状态协议，每次请求独立处理。\nGET用于读取资源，POST用于提交数据。状态码200表示成功，404表示资源未找到，500表示服务端内部错误。Cookie保存在客户端，Session状态通常保存在服务端。\nHTTPS使用TLS保护传输过程。HTTP请求包含方法、路径、请求头和可选的请求体。",
+            "position_kind": "document",
+            "position": null,
+            "text_start": 0,
+            "text_end": 167,
+            "similarity": 1.0000000000000002,
+            "rank_score": 1.12
+          }
+        ]
+      }
+    },
+    {
+      "case": "strict",
+      "message": "仍然只根据这份资料，告诉我本校老师今年考试的确切日期。",
+      "status": 200,
+      "result": {
+        "kind": "chat",
+        "intent": "ask",
+        "reply": "根据这份资料，无法回答这个问题。\n\nHTTP课件.md 的内容只涉及 HTTP 协议、方法、状态码、Cookie/Session、HTTPS 和请求结构等[资料1]，没有任何关于考试日期、校历或教师安排的信息。因此无法依据它给出确切的考试日期，也不应凭空推测。",
+        "model": "DeepSeek",
+        "citations": [
+          {
+            "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+            "chunk_ordinal": 0,
+            "document_id": "web-http",
+            "title": "HTTP课件.md",
+            "file_name": "HTTP课件.md",
+            "citation_number": 1,
+            "course_id": "a5c1671cc45d2ddb6c0c",
+            "chapter": "HTTP",
+            "source_type": "teacher_ppt",
+            "content": "HTTP\nHTTP是应用层协议。HTTP是无状态协议，每次请求独立处理。\nGET用于读取资源，POST用于提交数据。状态码200表示成功，404表示资源未找到，500表示服务端内部错误。Cookie保存在客户端，Session状态通常保存在服务端。\nHTTPS使用TLS保护传输过程。HTTP请求包含方法、路径、请求头和可选的请求体。",
+            "position_kind": "document",
+            "position": null,
+            "text_start": 0,
+            "text_end": 167,
+            "similarity": 1.0000000000000002,
+            "rank_score": 1.12
+          }
+        ]
+      }
+    },
+    {
+      "case": "quiz",
+      "message": "根据这份资料随机出五道简答题。",
+      "status": 200,
+      "result": {
+        "kind": "quiz",
+        "intent": "quiz",
+        "reply": "已根据当前课程指定范围的资料生成 5 道练习题。",
+        "quiz": {
+          "session_id": "fast-quiz-f37180b9b93c4782b52fbe1e87123288",
+          "question_count": 5
+        },
+        "model": "DeepSeek"
+      },
+      "questions": [
+        {
+          "id": "fast-quiz-f37180b9b9-q1",
+          "knowledge_point": "HTTP 是无状态协议的含义",
+          "question_type": "short_answer",
+          "stem": "请说明 HTTP 为什么被称为“无状态协议”，并解释这一特性对服务器处理请求的影响。",
+          "options": [],
+          "citations": [
+            {
+              "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+              "chunk_ordinal": 0,
+              "document_id": "web-http",
+              "title": "HTTP课件.md",
+              "file_name": "HTTP课件.md",
+              "citation_number": 0,
+              "course_id": "a5c1671cc45d2ddb6c0c",
+              "chapter": "HTTP",
+              "source_type": "teacher_ppt",
+              "position_kind": "document",
+              "position": null,
+              "text_start": 0,
+              "text_end": 167
+            }
+          ]
+        },
+        {
+          "id": "fast-quiz-f37180b9b9-q2",
+          "knowledge_point": "GET 与 POST 请求方法的用途区别",
+          "question_type": "short_answer",
+          "stem": "简述 HTTP 中 GET 和 POST 两种请求方法各自的用途。",
+          "options": [],
+          "citations": [
+            {
+              "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+              "chunk_ordinal": 0,
+              "document_id": "web-http",
+              "title": "HTTP课件.md",
+              "file_name": "HTTP课件.md",
+              "citation_number": 0,
+              "course_id": "a5c1671cc45d2ddb6c0c",
+              "chapter": "HTTP",
+              "source_type": "teacher_ppt",
+              "position_kind": "document",
+              "position": null,
+              "text_start": 0,
+              "text_end": 167
+            }
+          ]
+        },
+        {
+          "id": "fast-quiz-f37180b9b9-q3",
+          "knowledge_point": "常见 HTTP 状态码的含义",
+          "question_type": "short_answer",
+          "stem": "写出下列 HTTP 状态码的含义：200、404、500。",
+          "options": [],
+          "citations": [
+            {
+              "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+              "chunk_ordinal": 0,
+              "document_id": "web-http",
+              "title": "HTTP课件.md",
+              "file_name": "HTTP课件.md",
+              "citation_number": 0,
+              "course_id": "a5c1671cc45d2ddb6c0c",
+              "chapter": "HTTP",
+              "source_type": "teacher_ppt",
+              "position_kind": "document",
+              "position": null,
+              "text_start": 0,
+              "text_end": 167
+            }
+          ]
+        },
+        {
+          "id": "fast-quiz-f37180b9b9-q4",
+          "knowledge_point": "Cookie 与 Session 的存储位置",
+          "question_type": "short_answer",
+          "stem": "结合 HTTP 的无状态特性，说明 Cookie 和 Session 分别保存在哪里。",
+          "options": [],
+          "citations": [
+            {
+              "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+              "chunk_ordinal": 0,
+              "document_id": "web-http",
+              "title": "HTTP课件.md",
+              "file_name": "HTTP课件.md",
+              "citation_number": 0,
+              "course_id": "a5c1671cc45d2ddb6c0c",
+              "chapter": "HTTP",
+              "source_type": "teacher_ppt",
+              "position_kind": "document",
+              "position": null,
+              "text_start": 0,
+              "text_end": 167
+            }
+          ]
+        },
+        {
+          "id": "fast-quiz-f37180b9b9-q5",
+          "knowledge_point": "HTTP 请求的组成与 HTTPS 的传输保护",
+          "question_type": "short_answer",
+          "stem": "简述一个 HTTP 请求包含哪些部分，并说明 HTTPS 是如何保护传输过程的。",
+          "options": [],
+          "citations": [
+            {
+              "chunk_id": "125505b935b9b6d19a35b626c960c70f7bdaf38d843beb0b61a2a39de5d2652f",
+              "chunk_ordinal": 0,
+              "document_id": "web-http",
+              "title": "HTTP课件.md",
+              "file_name": "HTTP课件.md",
+              "citation_number": 0,
+              "course_id": "a5c1671cc45d2ddb6c0c",
+              "chapter": "HTTP",
+              "source_type": "teacher_ppt",
+              "position_kind": "document",
+              "position": null,
+              "text_start": 0,
+              "text_end": 167
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

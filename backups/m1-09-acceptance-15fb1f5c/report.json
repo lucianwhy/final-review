@@ -1,0 +1,187 @@
+{
+  "database": "isolated disposable PostgreSQL",
+  "checks": [
+    "owner registration",
+    "second user registration",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 --publish exit=2",
+    "partial publish leaves document unchanged",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --pages 2 exit=0",
+    "preview candidate keeps old index",
+    "CLI scripts/rebuild_materials.py --document-id m109-controlled --publish exit=0",
+    "historical reference preserved outside active index",
+    "owner original page 1",
+    "other user page 1 denied",
+    "owner original page 2",
+    "other user page 2 denied",
+    "owner original page 3",
+    "other user page 3 denied",
+    "cross course original denied",
+    "missing original page denied",
+    "owner history reference readable",
+    "other user history denied",
+    "owner preview quality",
+    "embedding failure retains old version",
+    "SQL publication failure rolls back all writes",
+    "concurrent metadata edit fences publication",
+    "CLI scripts/rebuild_course_materials.py --course-id 84efd8d5af8f26c40306 --workers 2 exit=0",
+    "course batch publishes legacy document",
+    "CLI scripts/rebuild_course_materials.py --course-id 84efd8d5af8f26c40306 --workers 1 exit=1",
+    "course failure keeps old document and chunks"
+  ],
+  "vision_model": "qwen3-vl-plus",
+  "fixtures": "controlled real PPTX",
+  "conversion_replayed": false,
+  "pages": [
+    {
+      "kind": "knowledge",
+      "title": "需要核对的页面",
+      "blocks": [],
+      "issues": [
+        "模型输出格式不完整或无法解析，请严格按照 JSON 结构重新生成"
+      ],
+      "quality": "review_needed",
+      "position": 1
+    },
+    {
+      "kind": "knowledge",
+      "title": "HTTP 会话：图片知识页",
+      "blocks": [
+        {
+          "title": "HTTP 协议特性",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b1",
+          "evidence": [
+            {
+              "quote": "HTTP 是无状态协议。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "Cookie 存储位置",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b2",
+          "evidence": [
+            {
+              "quote": "Cookie 保存在客户端。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "Session 存储位置",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b3",
+          "evidence": [
+            {
+              "quote": "Session 状态保存在服务端。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": []
+        }
+      ],
+      "issues": [],
+      "quality": "verified",
+      "position": 2
+    },
+    {
+      "kind": "knowledge",
+      "title": "Servlet 请求处理",
+      "blocks": [
+        {
+          "title": "参数读取方法",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b1",
+          "evidence": [
+            {
+              "quote": "request.getParameter(\"name\") 读取参数。",
+              "origin": "native",
+              "source_id": "native-2"
+            },
+            {
+              "quote": "教师备注：参数名 name 区分大小写。",
+              "origin": "note",
+              "source_id": "note-1"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "控制台输出语句",
+          "issues": [
+            "image-page 中 'stem.out.printin(\"ok\");' 为 OCR 错误，正确应为 System.out.println(\"ok\");，以 native-3 为准。"
+          ],
+          "quality": "review_needed",
+          "block_id": "b2",
+          "evidence": [
+            {
+              "quote": "System.out.println(\"ok\");",
+              "origin": "native",
+              "source_id": "native-3"
+            }
+          ],
+          "warnings": [
+            "image-page 中 'stem.out.printin(\"ok\");' 为 OCR 错误，正确应为 System.out.println(\"ok\");；但 native-3 提供准确代码，故以 native-3 为准，不影响本块支持性。"
+          ]
+        },
+        {
+          "title": "响应状态码 404 含义",
+          "issues": [],
+          "quality": "verified",
+          "block_id": "b3",
+          "evidence": [
+            {
+              "quote": "响应状态码 404 表示资源未找到。",
+              "origin": "native",
+              "source_id": "native-4"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "title": "GET 与 POST 方法语义",
+          "issues": [
+            "image-page 中原文为分行排版断句，实际应为连续语句：'GET 用于读取资源，POST 用于提交数据。'"
+          ],
+          "quality": "review_needed",
+          "block_id": "b4",
+          "evidence": [
+            {
+              "quote": "GET\n\n于读取资源 ,POST\n\n于提交数据 。",
+              "origin": "image",
+              "source_id": "image-page"
+            }
+          ],
+          "warnings": [
+            "image-page 中原文为分行排版（'GET\\n\\n于读取资源 ,POST\\n\\n于提交数据 。'），语义完整，可合理重构为连续句；该重构未改变原意，属合理整理。"
+          ]
+        }
+      ],
+      "issues": [
+        "控制台输出语句：image-page 中 'stem.out.printin(\"ok\");' 为 OCR 错误，正确应为 System.out.println(\"ok\");，以 native-3 为准。",
+        "GET 与 POST 方法语义：image-page 中原文为分行排版断句，实际应为连续语句：'GET 用于读取资源，POST 用于提交数据。'"
+      ],
+      "quality": "partial",
+      "position": 3
+    }
+  ],
+  "cleaned_text": "HTTP 协议特性\n\nHTTP 是无状态协议。\n\nCookie 存储位置\n\nCookie 保存在客户端。\n\nSession 存储位置\n\nSession 状态保存在服务端。\n\n参数读取方法\n\nrequest.getParameter(\"name\") 读取参数。教师备注：参数名 name 区分大小写。\n\n响应状态码 404 含义\n\n响应状态码 404 表示资源未找到。",
+  "failed_visual_checks": [
+    "navigation page excluded; image and mixed pages indexed",
+    "image facts, native code and image facts retained",
+    "all controlled pages verified"
+  ],
+  "status": "failed",
+  "database_removed": true,
+  "seconds": 210.55
+}

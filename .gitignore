@@ -1,5 +1,6 @@
 # 学生私有复习数据（不上传）
 storage/
+uploads/
 
 # Python
 __pycache__/
@@ -20,3 +21,23 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime / credentials / tooling
+.env
+.env.*
+!.env.example
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.tools/
+logs/
+exports/

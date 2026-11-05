@@ -1,0 +1,109 @@
+import pytest
+
+from final_review.rag import clean_markdown, validate_vectors
+from final_review.schemas import MaterialInput
+
+
+def test_dedup_ingestion_avoids_embedding_cost(system):
+    material = MaterialInput(
+        course_id="net", title="repeat", source_type="homework", markdown="定义"
+    )
+    first = system.kb.ingest(material)
+    calls = system.kb.embeddings.document_calls
+    second = system.kb.ingest(material)
+    assert first["document_id"] == second["document_id"]
+    assert second["cached"]
+    assert calls == system.kb.embeddings.document_calls
+
+
+def test_ingestion_respects_embedding_provider_batch_limit(system, monkeypatch):
+    texts = [f"part {index}" for index in range(23)]
+    monkeypatch.setattr(system.kb.splitter, "split_text", lambda _: texts)
+    batch_sizes = []
+    original = system.kb.embeddings.embed_documents
+
+    def embed(batch):
+        batch_sizes.append(len(batch))
+        return original(batch)
+
+    monkeypatch.setattr(system.kb.embeddings, "embed_documents", embed)
+    result = system.kb.ingest(
+        MaterialInput(course_id="net", title="long", source_type="homework", markdown="long")
+    )
+    assert batch_sizes == [10, 10, 3]
+    assert result["chunks"] == len(texts)
+
+
+def test_source_priority_and_course_chapter_filter(system):
+    for source in ["past_exam", "homework", "crash_course", "ai_supplement"]:
+        system.kb.ingest(
+            MaterialInput(
+                course_id="net",
+                title=source,
+                chapter="TCP",
+                source_type=source,
+                markdown="TCP 序列号",
+            )
+        )
+    system.kb.ingest(
+        MaterialInput(
+            course_id="foreign",
+            title="其他课",
+            source_type="past_exam",
+            chapter="TCP",
+            markdown="别的课程不能召回",
+        )
+    )
+    results = system.kb.search("TCP", "net", "TCP")
+    assert [e.source_type.value for e in results] == [
+        "past_exam",
+        "teacher_ppt",
+        "homework",
+        "crash_course",
+        "ai_supplement",
+    ]
+    assert all(e.course_id == "net" for e in results)
+    assert system.kb.search("TCP", "net", "不存在的章节") == []
+
+
+def test_irrelevant_exam_cannot_win_by_source_weight(system):
+    system.store.chunks[0]["embedding"] = [0.0, 0.0, 1.0]
+    assert system.kb.search("无关", "net") == []
+
+
+@pytest.mark.parametrize("vector", [[0, 0, 0], [1, 2], [float("nan"), 0, 1]])
+def test_invalid_embeddings_rejected(vector):
+    with pytest.raises(ValueError):
+        validate_vectors([vector], 1, 3)
+
+
+def test_cleaning_preserves_formula_and_code():
+    text = "\ufeff# 定理\r\n\r\n$$x^2 + y^2 = z^2$$\r\n\r\n```python\nprint(1)\nprint(1)\n```"
+    cleaned = clean_markdown(text)
+    assert "$$x^2 + y^2 = z^2$$" in cleaned
+    assert cleaned.count("print(1)") == 2
+    assert "\r" not in cleaned
+
+
+def test_prepare_removes_pdf_control_characters_before_storing_original_markdown(system):
+    material = MaterialInput(
+        course_id="net",
+        title="PDF 讲义",
+        source_type="homework",
+        markdown="TCP\x00 三次握手\n第二页\x01内容",
+    )
+
+    document, chunks = system.kb.prepare(
+        material,
+        sections=[{"position_kind": "page", "position": 1, "text": material.markdown}],
+    )
+
+    assert document["markdown"] == "TCP 三次握手\n第二页内容"
+    assert document["cleaned_markdown"] == document["markdown"]
+    assert chunks[0]["content"] == document["markdown"]
+
+
+@pytest.mark.parametrize("text", ["  \n\x00", "\ufffd" * 10])
+def test_unreadable_material_rejected(text):
+    with pytest.raises(ValueError):
+        clean_markdown(text)

@@ -1,0 +1,19 @@
+{
+  "description": "AI 编写的合成教学样本，仅用于检索与问答冒烟评测，非真实试卷",
+  "documents": [
+    {"name": "tcp", "chapter": "transport", "markdown": "TCP 三次握手用于同步双方初始序列号并确认双方收发能力。客户端发送 SYN，服务端回复 SYN+ACK，客户端再回复 ACK。两次握手不能让服务端确认客户端收到自己的初始序列号。"},
+    {"name": "udp", "chapter": "transport", "markdown": "UDP 无连接，不保证可靠交付，不保证顺序，不提供 TCP 式拥塞控制。应用层可以自行实现可靠性机制。"},
+    {"name": "dns", "chapter": "application", "markdown": "DNS 将域名解析到资源记录，例如 IPv4 地址使用 A 记录。DNS 既可使用 UDP，也可使用 TCP。不能说 DNS 永远只用 UDP。"},
+    {"name": "http", "chapter": "application", "markdown": "HTTP 404 表示服务器未找到目标资源的当前表示，或不愿透露其存在。HTTP 500 表示服务器遇到意外情况，无法完成请求。"}
+  ],
+  "cases": [
+    {"id": "tcp-purpose", "query": "TCP 三次握手为什么需要三次？", "documents": ["tcp"], "terms": ["序列号", "确认"]},
+    {"id": "tcp-sequence", "query": "写出 TCP 三次握手的报文顺序", "documents": ["tcp"], "terms": ["SYN", "ACK"]},
+    {"id": "udp-guarantee", "query": "UDP 保证可靠交付吗？", "documents": ["udp"], "terms": ["不保证", "可靠"]},
+    {"id": "dns-role", "query": "DNS 的用途是什么？", "documents": ["dns"], "terms": ["域名", "解析"]},
+    {"id": "dns-transport", "query": "DNS 永远只用 UDP，对吗？", "documents": ["dns"], "terms": ["TCP", "UDP"]},
+    {"id": "http-404", "query": "HTTP 404 和 500 有什么区别？", "documents": ["http"], "terms": ["404", "500"]},
+    {"id": "empty-course", "query": "请解释 TCP", "empty_course": true},
+    {"id": "missing-chapter", "query": "请解释 TCP", "chapter": "absent"}
+  ]
+}
