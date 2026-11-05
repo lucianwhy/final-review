@@ -6,6 +6,11 @@
   <img alt="Final Review Agent：从课程资料到有来源的笔记、模拟测验与薄弱点复习" src="docs/assets/readme-hero-light.svg" width="1200">
 </picture>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com/?font=Fira+Code&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=9FDDBD&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=Turn+course+materials+into+cited+notes.;Practice+with+source-grounded+mock+exams.;Review+weak+points.+Build+understanding.">
+  <img alt="Turn course materials into cited notes. Practice with source-grounded mock exams. Review weak points. Build understanding." src="https://readme-typing-svg.demolab.com/?font=Fira+Code&amp;size=22&amp;duration=3500&amp;pause=1200&amp;color=286B59&amp;vCenter=true&amp;width=720&amp;height=48&amp;lines=Turn+course+materials+into+cited+notes.;Practice+with+source-grounded+mock+exams.;Review+weak+points.+Build+understanding." width="720" height="48">
+</picture>
+
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agent_workflow-286B59?style=flat-square)](docs/architecture.md)
 [![PostgreSQL + pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)](docs/local-postgres.md)
