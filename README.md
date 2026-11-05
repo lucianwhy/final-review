@@ -1,5 +1,32 @@
 # Final Review Agent
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-hero-light.svg">
+  <img alt="Final Review Agent：从课程资料到有来源的笔记、模拟测验与薄弱点复习" src="docs/assets/readme-hero-light.svg" width="1200">
+</picture>
+
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent_workflow-286B59?style=flat-square)](docs/architecture.md)
+[![PostgreSQL + pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)](docs/local-postgres.md)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white)](src/final_review/api.py)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
+
+<!-- Keep these links. Translations will automatically update with the README. -->
+[中文](README.md) |
+[English](https://zdoc.app/en/lucianwhy/final-review) |
+[Deutsch](https://zdoc.app/de/lucianwhy/final-review) |
+[Español](https://zdoc.app/es/lucianwhy/final-review) |
+[français](https://zdoc.app/fr/lucianwhy/final-review) |
+[日本語](https://zdoc.app/ja/lucianwhy/final-review) |
+[한국어](https://zdoc.app/ko/lucianwhy/final-review) |
+[Português](https://zdoc.app/pt/lucianwhy/final-review) |
+[Русский](https://zdoc.app/ru/lucianwhy/final-review)
+
+<sub>其他语言通过 zdoc 查看自动译文。</sub>
+
+[快速启动](#快速启动) · [能力与实现](#能力与实现) · [使用示例](#跑通一次复习) · [测试](#测试) · [架构说明](docs/architecture.md)
+
 基于 **LangChain + LangGraph + PostgreSQL/pgvector** 的期末复习 Agent 后端。可独立运行，也可作为学习系统中的一个 Agent 模块使用。
 
 接收课程资料，完成资料入库、带来源问答、模拟出题、作答评测与薄弱点反馈。原有 [SKILL.md](SKILL.md) 保留为领域规范；[policy.py](src/final_review/policy.py) 和工作流把关键规则落实为代码。
@@ -21,9 +48,9 @@
 | 正式试卷草稿 | 配置确认后后台生成，校验题型/分值/引用并逐题复核；持久化 Quiz/Question revisions，在原对话与“模拟测验”找回并预览答案和来源；见 [试卷草稿生成](docs/quiz-draft-generation.md) |
 | 试卷编辑与正式作答 | 草稿编辑、语义复核、确认与两种打印版；从已确认版本开始在线作答、评分、逐题查看与追问。本地工程验收：后端全量 350 通过、隔离 PostgreSQL 12 通过、浏览器 43 通过；见 [M3 开发报告](docs/m3-development-report-2026-10-12.md) |
 | 错题管理（M4 第一轮） | 正式评分自动生成可追溯错题；按课程、考试、章节、知识点、题型和掌握状态组合筛选，手动标记并创建有记录的单题重练；见 [开发报告与手动验收清单](docs/m4-round1-development-report-2026-10-21.md)。报告和计划仍待后续开发。 |
+| 交付 | FastAPI /docs、JSON 响应、题答分离 Markdown 导出、Docker Compose |
 
 M3 的实际验证结果见 [完整验收记录](docs/m3-acceptance-2026-10-12.md)；本地启动和全链路检查见 [M3 操作手册](docs/m3-local-runbook.md)，源码自学顺序见 [M3 学习路线](docs/m3-source-learning-route.md)。
-| 交付 | FastAPI /docs、JSON 响应、题答分离 Markdown 导出、Docker Compose |
 
 ```mermaid
 flowchart TD
