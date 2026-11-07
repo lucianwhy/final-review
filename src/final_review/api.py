@@ -47,6 +47,7 @@ from .formal_attempt import (
 )
 from .formal_grading import grade_formal_attempt
 from .formal_result import ask_quiz_followup, read_formal_result
+from .learning_tasks import learning_action_cards, learning_task_snapshot, report_snapshot
 from .llm import ModelError, build_fast_quiz_model, build_models, build_review_model
 from .material_conversion import SUPPORTED_SUFFIXES
 from .mistakes import (
@@ -271,6 +272,7 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
         content: str,
         *,
         draft: dict | None = None,
+        action_cards: list[dict] | None = None,
     ):
         store = conversation_store()
         key = stable_key(course_id, conversation_id, "note", event_id)
@@ -286,6 +288,8 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
         }
         if draft:
             item["draft"] = draft
+        if action_cards:
+            item["action_cards"] = action_cards
         store.put("message", key, item)
 
     def note_state(
@@ -700,7 +704,8 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             "利用当前对话历史承接上次追问；肯定回复可确认上次任务，task_message写完整任务要求。"
             "不要根据单个关键词或旧对话标题决定当前意图。"
             "action只能为general（自由讨论无需资料）、overview（课程或资料概况）、"
-            "search（知识点检索）、read（总结指定文件、比较资料、通读）。"
+            "search（知识点检索）、read（总结指定文件、比较资料、通读）、"
+            "report（分析当前课程学习报告）、mistakes（分析当前课程错题）。"
             "课程概念解释、知识点分析、如何理解某个术语默认search，先查课程资料。"
             "general只用于寒暄、闲聊和不涉及具体课程知识的交流；不能因为用户说分析就跳过资料。"
             "overview_kind为course、statistics、list或all。query是相关知识点的简短检索词。"
@@ -2030,6 +2035,63 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
                 "quiz_job": quiz_job,
                 "model": settings.get_chat_model(request.model_id).label,
             }
+        if decision.action in {"report", "mistakes"}:
+            store = conversation_store()
+            snapshot = learning_task_snapshot(store, user.id, request.course_id, decision.action)
+            selected_model = settings.get_chat_model(request.model_id)
+            client = OpenAI(
+                api_key=selected_model.api_key.get_secret_value(),
+                base_url=selected_model.base_url,
+                timeout=settings.model_timeout,
+            )
+            try:
+                completion = client.chat.completions.create(
+                    model=selected_model.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是课程学习任务规划 Agent。根据提供的真实学习报告和错题统计，"
+                                "用中文给出简洁、具体的诊断，优先指出报告和错题共同印证的薄弱点，"
+                                "再给出一个下一步建议。只根据数据回答，不推测原因，不声称已创建试卷或计划。"
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": json.dumps(snapshot, ensure_ascii=False),
+                        },
+                    ],
+                )
+                reply = (completion.choices[0].message.content or "").strip()
+                if not reply:
+                    raise ValueError("模型没有返回学习分析")
+            except Exception as exc:
+                raise HTTPException(502, "学习分析暂时不可用，请稍后重试") from exc
+            cards = learning_action_cards(snapshot)
+            note_message(
+                request.course_id,
+                request.conversation_id,
+                user,
+                uuid4().hex,
+                "user",
+                request.message,
+            )
+            note_message(
+                request.course_id,
+                request.conversation_id,
+                user,
+                uuid4().hex,
+                "assistant",
+                reply,
+                action_cards=cards,
+            )
+            return {
+                "kind": "chat",
+                "intent": intent,
+                "reply": reply,
+                "model": selected_model.label,
+                "action_cards": cards,
+            }
         result = chat(
             request.model_copy(
                 update={
@@ -2842,32 +2904,23 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
     @app.get("/api/courses/{course_id}/report", dependencies=[Depends(authorize)])
     def report(course_id: Identifier, user: CurrentUser = Depends(authorize)):
         require_course(course_id, user)
-        attempts = conversation_store().scan("attempt", {"course_id": course_id})
-        question_count = sum(item.get("question_count", 0) for item in attempts)
-        average = (
-            round(sum(item.get("score", 0) for item in attempts) / len(attempts), 1)
-            if attempts
-            else 0
-        )
-        topic_scores: dict[str, list[float]] = {}
-        for attempt in attempts:
-            questions = {
-                q["id"]: q for q in attempt.get("assessment", {}).get("reference_questions", [])
-            }
-            for grade in attempt.get("assessment", {}).get("items", []):
-                topic = questions.get(grade["question_id"], {}).get("knowledge_point", "未分类")
-                topic_scores.setdefault(topic, []).append(grade["score"])
-        topics = [
-            {"name": name, "score": round(sum(scores) / len(scores), 1)}
-            for name, scores in topic_scores.items()
+        store = conversation_store()
+        snapshot = report_snapshot(store, user.id, course_id)
+        attempts = [
+            item
+            for item in store.scan("attempt", {"course_id": course_id})
+            if item.get("user_id") == user.id and item.get("status") == "submitted"
         ]
-        topics.sort(key=lambda item: item["score"])
+        attempts.sort(
+            key=lambda item: item.get("submitted_at") or item.get("created_at", ""),
+            reverse=True,
+        )
         return {
-            "attempt_count": len(attempts),
-            "question_count": question_count,
-            "average_score": average,
-            "topics": topics,
-            "attempts": attempts[-10:],
+            "attempt_count": snapshot["attempt_count"],
+            "question_count": snapshot["question_count"],
+            "average_score": snapshot["average_score"] or 0,
+            "topics": snapshot["topics"],
+            "attempts": attempts[:10],
         }
 
     @app.post("/agent/recover", response_model=AgentResponse, dependencies=[Depends(authorize)])

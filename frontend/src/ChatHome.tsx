@@ -7,16 +7,17 @@ import { ChatQuiz, ChatSources, type ChatCitation, type ChatQuizCard } from "./C
 import NoteMaterialPicker, { materialLabel, type NoteMaterial } from "./NoteMaterialPicker";
 
 type ChatModel = { id: string; label: string };
+type ActionCard = { label: string; href?: string; prompt?: string; kind: "link" | "prompt" | "quiz"; quiz_input?: QuizInput };
 type DraftCard = { asset_id: string; revision_id: string; title: string; note_type: string; url: string };
 type AgentResult = { session_id: string; status: string; answer: string; prompt?: { message: string; required: string[] }; note_config?: { note_type?: string; scope?: string; duration_minutes?: number }; draft?: DraftCard };
 type DispatchResult = { kind: "note"; intent: "note"; session_id: string; result: AgentResult; source_document_ids?: string[] | null }
-  | { kind: "chat" | "quiz"; intent: "ask" | "quiz" | "clarify"; reply: string; model: string; citations?: ChatCitation[]; quiz?: ChatQuizCard; status?: string; quiz_configuration?: QuizConfiguration; quiz_scope?: PendingQuiz["scope"]; quiz_job?: QuizJob };
+  | { kind: "chat" | "quiz"; intent: "ask" | "quiz" | "clarify"; reply: string; model: string; citations?: ChatCitation[]; quiz?: ChatQuizCard; action_cards?: ActionCard[]; status?: string; quiz_configuration?: QuizConfiguration; quiz_scope?: PendingQuiz["scope"]; quiz_job?: QuizJob };
 type NoteCoverage = { selected_files: number; readable_chunks: number; read_chunks: number; partial: boolean; files: { document_id: string; file_name: string; readable_chunks: number; read_chunks: number }[] };
-type Message = { from: "agent" | "user"; text: string; model?: string; draft?: DraftCard; citations?: ChatCitation[]; quiz?: ChatQuizCard; quiz_draft?: QuizDraftCard };
-type StoredMessage = { role: "user" | "assistant"; content: string; model?: string; draft?: DraftCard; citations?: ChatCitation[]; quiz?: ChatQuizCard; quiz_draft?: QuizDraftCard };
+type Message = { from: "agent" | "user"; text: string; model?: string; draft?: DraftCard; citations?: ChatCitation[]; quiz?: ChatQuizCard; quiz_draft?: QuizDraftCard; action_cards?: ActionCard[] };
+type StoredMessage = { role: "user" | "assistant"; content: string; model?: string; draft?: DraftCard; citations?: ChatCitation[]; quiz?: ChatQuizCard; quiz_draft?: QuizDraftCard; action_cards?: ActionCard[] };
 function restoreMessage(item: StoredMessage): Message {
   return { from: item.role === "user" ? "user" : "agent", text: item.content, model: item.model,
-    draft: item.draft, citations: item.citations, quiz: item.quiz, quiz_draft: item.quiz_draft };
+    draft: item.draft, citations: item.citations, quiz: item.quiz, quiz_draft: item.quiz_draft, action_cards: item.action_cards };
 }
 type ActiveNote = { session_id: string; status: "needs_input" | "queued" | "running" | "failed"; job_id?: string; stage?: string; error?: string; coverage?: NoteCoverage; prompt?: AgentResult["prompt"]; note_input?: { note_type?: string; scope?: string; duration_minutes?: number; source_document_ids?: string[] } };
 
@@ -438,7 +439,7 @@ export default function ChatHome({ courseId, selectedConversationId, titleRefres
     options[next]?.focus();
   }
 
-  async function send(value = draft) {
+  async function send(value = draft, quizInput?: QuizInput) {
     const message = value.trim();
     if (!message || isSending) return;
     if (composerUploading) { setModelError("请等待文件上传完成后再发送。"); return; }
@@ -469,6 +470,7 @@ export default function ChatHome({ courseId, selectedConversationId, titleRefres
         conversation_id: requestConversationId,
         model_id: modelId,
         attachment_document_ids: composerMaterials.map(item => item.document_id),
+        ...(quizInput ? { quiz_input: quizInput } : {}),
       });
       if (!mounted.current || conversationId.current !== requestConversationId) return;
       if (result.kind === "note") {
@@ -487,7 +489,7 @@ export default function ChatHome({ courseId, selectedConversationId, titleRefres
         }
       } else {
         setMessages(current => [...current, { from: "agent", text: result.reply,
-          model: result.model || selectedLabel, citations: result.citations, quiz: result.quiz }]);
+          model: result.model || selectedLabel, citations: result.citations, quiz: result.quiz, action_cards: result.action_cards }]);
         setComposerMaterials([]);
         if (result.quiz_configuration && result.status === "needs_input") {
           setPendingQuiz({ quiz_input: result.quiz_configuration.quiz_input, scope: result.quiz_scope });
@@ -607,7 +609,7 @@ export default function ChatHome({ courseId, selectedConversationId, titleRefres
       </div>}
       {messages.map((item, index) => <article className={`message ${item.from}${item.quiz ? " quiz-message" : ""}`} key={index}>
         <i aria-hidden="true">{item.from === "agent" ? "✦" : "你"}</i>
-        <div><label>{item.from === "agent" ? item.model || "助手" : "你"}</label><p>{item.text}</p>{Boolean(item.citations?.length) && <ChatSources citations={item.citations!} />}{item.quiz && courseId && <ChatQuiz courseId={courseId} quiz={item.quiz} />}{item.quiz_draft && <button type="button" className="quiz-draft-card" onClick={() => setPreviewQuiz(item.quiz_draft!)}><strong>{item.quiz_draft.title}</strong><span>{item.quiz_draft.question_count} 题 · {item.quiz_draft.total_score} 分 · 查看试卷草稿 →</span></button>}{item.draft && <a className="note-draft-card" href={item.draft.url}><strong>{item.draft.title}</strong><span>打开笔记草稿 →</span></a>}</div>
+        <div><label>{item.from === "agent" ? item.model || "助手" : "你"}</label><p>{item.text}</p>{Boolean(item.citations?.length) && <ChatSources citations={item.citations!} />}{item.quiz && courseId && <ChatQuiz courseId={courseId} quiz={item.quiz} />}{item.quiz_draft && <button type="button" className="quiz-draft-card" onClick={() => setPreviewQuiz(item.quiz_draft!)}><strong>{item.quiz_draft.title}</strong><span>{item.quiz_draft.question_count} 题 · {item.quiz_draft.total_score} 分 · 查看试卷草稿 →</span></button>}{item.draft && <a className="note-draft-card" href={item.draft.url}><strong>{item.draft.title}</strong><span>打开笔记草稿 →</span></a>}{item.action_cards?.length ? <div className="agent-action-cards">{item.action_cards.map(card => card.href ? <a key={card.label} href={card.href}>{card.label} →</a> : <button key={card.label} type="button" onClick={() => { if (card.kind === "quiz" && card.quiz_input) void send(card.prompt ?? card.label, card.quiz_input); else { setDraft(card.prompt ?? ""); composerTextareaRef.current?.focus(); } }}>{card.label} →</button>)}</div> : null}</div>
       </article>)}
       {noteRecovery && noteSession && <article className="message agent note-job-message" role="status"><i aria-hidden="true">✦</i><div><label>助手</label><div className="note-job-status"><div className="note-job-copy"><span>{noteRecovery === "queued" ? "笔记任务已排队，正在等待生成。" : noteRecovery === "running" ? `正在生成笔记${noteJobStage ? ` · ${noteJobStage}` : "…"}` : `笔记生成失败${noteJobError ? `：${noteJobError}` : ""}`}</span>{noteCoverage && <small>{coverageSummary(noteCoverage)}</small>}</div><div className="note-job-actions">{noteRecovery === "failed" && <button type="button" className="note-job-retry" disabled={isSending} onClick={() => void recoverNote()}>{noteJobId ? "重试生成" : "恢复笔记任务"}</button>}<button type="button" className="note-job-cancel" disabled={noteCancelling} onClick={() => void cancelNote()}>{noteCancelling ? "正在取消…" : noteRecovery === "failed" ? "结束任务" : "取消生成"}</button></div></div></div></article>}
       {quizJob && <article className="message agent note-job-message" role="status"><i aria-hidden="true">✦</i><div><label>助手</label><p>{quizJob.status === "failed" ? `试卷生成失败：${quizJob.error || "请稍后重试"}` : `正在生成试卷 · ${quizStages[quizJob.stage] || "处理中"}${quizJob.progress ? ` · 已完成 ${quizJob.progress.completed_questions}/${quizJob.progress.total_questions} 题` : ""}`}</p>{quizJob.status === "failed" && <button type="button" disabled={isSending} onClick={() => void retryQuiz()}>重试生成试卷</button>}</div></article>}
