@@ -287,14 +287,23 @@ def test_agent_report_analysis_uses_owned_course_attempts_and_persists_actions(c
         },
     )
     setup.decisions["分析一下我的学习报告"] = {"action": "report"}
+    setup.answers.append("测验平均分偏低，三次握手需要优先复习；建议做一套定向练习。")
 
     result = send(setup, "分析一下我的学习报告")
 
     assert result.status_code == 200
     payload = result.json()
-    assert "1 场测验、1 道已评分题目" in payload["reply"]
-    assert "三次握手（40.0）" in payload["reply"]
-    assert [card["kind"] for card in payload["action_cards"]] == ["link", "link", "prompt"]
+    assert "测验平均分偏低" in payload["reply"]
+    assert [card["kind"] for card in payload["action_cards"]] == ["link", "link", "quiz"]
+    assert payload["action_cards"][2]["quiz_input"] == {
+        "scope_mode": "knowledge_points",
+        "knowledge_points": ["三次握手"],
+    }
+    analysis_request = setup.calls[-1]
+    evidence = json.loads(analysis_request["messages"][1]["content"])
+    assert evidence["report"]["average_score"] == 40.0
+    assert evidence["report"]["focus_topics"] == [{"name": "三次握手", "score": 40.0}]
+    assert evidence["mistakes"]["mistake_count"] == 0
     report = setup.client.get(f"/api/courses/{setup.course_id}/report").json()
     assert report["attempt_count"] == 1
     assert report["topics"] == [{"name": "三次握手", "score": 40.0}]
@@ -303,10 +312,25 @@ def test_agent_report_analysis_uses_owned_course_attempts_and_persists_actions(c
     ]
     assert history[-1]["action_cards"] == payload["action_cards"]
 
+    quiz = setup.client.post(
+        "/api/chat/dispatch",
+        json={
+            "course_id": setup.course_id,
+            "conversation_id": "one",
+            "model_id": "selected",
+            "message": payload["action_cards"][2]["prompt"],
+            "quiz_input": payload["action_cards"][2]["quiz_input"],
+        },
+    )
+    assert quiz.status_code == 200, quiz.text
+    assert quiz.json()["status"] == "needs_input"
+    assert quiz.json()["quiz_configuration"]["quiz_input"]["knowledge_points"] == ["三次握手"]
+
 
 def test_agent_mistake_analysis_summarizes_course_records(chat_setup):
     setup = chat_setup
     setup.decisions["错题集中在哪些知识点"] = {"action": "mistakes"}
+    setup.answers.append("错题目前集中在三次握手，优先针对该知识点复习。")
     setup.system.store.put(
         "mistake",
         "mistake-owned",
@@ -324,9 +348,9 @@ def test_agent_mistake_analysis_summarizes_course_records(chat_setup):
     assert response.status_code == 200, response.json()["detail"].encode("unicode_escape")
     payload = response.json()
 
-    assert "目前有 1 道错题，其中 1 道尚未标记为已掌握" in payload["reply"]
-    assert "三次握手（1 道）" in payload["reply"]
+    assert "错题目前集中在三次握手" in payload["reply"]
     assert payload["action_cards"][1]["href"] == "#mistakes"
+    assert payload["action_cards"][2]["quiz_input"]["knowledge_points"] == ["三次握手"]
 
 
 def test_scoped_retrieval_citations_and_independent_history(chat_setup):

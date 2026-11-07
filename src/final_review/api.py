@@ -47,6 +47,7 @@ from .formal_attempt import (
 )
 from .formal_grading import grade_formal_attempt
 from .formal_result import ask_quiz_followup, read_formal_result
+from .learning_tasks import learning_action_cards, learning_task_snapshot, report_snapshot
 from .llm import ModelError, build_fast_quiz_model, build_models, build_review_model
 from .material_conversion import SUPPORTED_SUFFIXES
 from .mistakes import (
@@ -2036,96 +2037,37 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             }
         if decision.action in {"report", "mistakes"}:
             store = conversation_store()
-            cards = [
-                {"label": "打开学习报告", "href": "#report", "kind": "link"},
-                {"label": "查看错题", "href": "#mistakes", "kind": "link"},
-                {
-                    "label": "按薄弱点生成试卷",
-                    "prompt": "请根据我的学习报告和错题，生成一份针对薄弱知识点的复习试卷。",
-                    "kind": "prompt",
-                },
-            ]
-            if decision.action == "report":
-                attempts = [
-                    item
-                    for item in store.scan("attempt", {"course_id": request.course_id})
-                    if item.get("user_id") == user.id and item.get("status") == "submitted"
-                ]
-                grades = [
-                    grade
-                    for item in attempts
-                    for grade in item.get("assessment", {}).get("items", [])
-                ]
-                topic_scores: dict[str, list[float]] = {}
-                for item in attempts:
-                    questions = {
-                        q["id"]: q
-                        for q in item.get("assessment", {}).get("reference_questions", [])
-                    }
-                    for grade in item.get("assessment", {}).get("items", []):
-                        topic = questions.get(grade["question_id"], {}).get(
-                            "knowledge_point", "未分类"
-                        )
-                        topic_scores.setdefault(topic, []).append(float(grade.get("score", 0)))
-                weakest = sorted(
-                    (
-                        {"name": topic, "score": round(sum(values) / len(values), 1)}
-                        for topic, values in topic_scores.items()
-                    ),
-                    key=lambda item: item["score"],
-                )[:5]
-                summary = {
-                    "attempt_count": len(attempts),
-                    "question_count": len(grades),
-                    "average_score": round(
-                        sum(float(item.get("score", 0)) for item in attempts) / len(attempts), 1
-                    )
-                    if attempts
-                    else None,
-                    "weakest_topics": weakest,
-                }
-                reply = (
-                    f"已根据本课程已提交的正式测验整理报告：{len(attempts)} 场测验、"
-                    f"{len(grades)} 道已评分题目。"
+            snapshot = learning_task_snapshot(store, user.id, request.course_id, decision.action)
+            selected_model = settings.get_chat_model(request.model_id)
+            client = OpenAI(
+                api_key=selected_model.api_key.get_secret_value(),
+                base_url=selected_model.base_url,
+                timeout=settings.model_timeout,
+            )
+            try:
+                completion = client.chat.completions.create(
+                    model=selected_model.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是课程学习任务规划 Agent。根据提供的真实学习报告和错题统计，"
+                                "用中文给出简洁、具体的诊断，优先指出报告和错题共同印证的薄弱点，"
+                                "再给出一个下一步建议。只根据数据回答，不推测原因，不声称已创建试卷或计划。"
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": json.dumps(snapshot, ensure_ascii=False),
+                        },
+                    ],
                 )
-                if attempts:
-                    reply += f"测验平均得分为 {summary['average_score']}。"
-                else:
-                    reply += "目前还没有已提交的正式测验，因此暂时无法计算得分趋势。"
-                if weakest:
-                    reply += (
-                        "当前得分较低的知识点："
-                        + "、".join(f"{item['name']}（{item['score']}）" for item in weakest)
-                        + "。"
-                    )
-                else:
-                    reply += "目前没有可用于比较的知识点得分。"
-            else:
-                items = list_mistakes(store, user.id, course_id=request.course_id)["items"]
-                counts: dict[str, int] = {}
-                for item in items:
-                    point = item.get("knowledge_point") or "未分类"
-                    counts[point] = counts.get(point, 0) + 1
-                weak = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))[:5]
-                summary = {
-                    "mistake_count": len(items),
-                    "unmastered_count": sum(
-                        item.get("mastery_status") != "mastered" for item in items
-                    ),
-                    "weakest_topics": [{"name": name, "mistakes": count} for name, count in weak],
-                }
-                reply = (
-                    f"本课程目前有 {len(items)} 道错题，"
-                    f"其中 {summary['unmastered_count']} 道尚未标记为已掌握。"
-                )
-                if weak:
-                    reply += (
-                        "错题较集中的知识点："
-                        + "、".join(f"{name}（{count} 道）" for name, count in weak)
-                        + "。"
-                    )
-                else:
-                    reply += "目前还没有错题记录。"
+                reply = (completion.choices[0].message.content or "").strip()
+                if not reply:
+                    raise ValueError("模型没有返回学习分析")
+            except Exception as exc:
+                raise HTTPException(502, "学习分析暂时不可用，请稍后重试") from exc
+            cards = learning_action_cards(snapshot)
             note_message(
                 request.course_id,
                 request.conversation_id,
@@ -2147,7 +2089,7 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
                 "kind": "chat",
                 "intent": intent,
                 "reply": reply,
-                "model": settings.get_chat_model(request.model_id).label,
+                "model": selected_model.label,
                 "action_cards": cards,
             }
         result = chat(
@@ -2962,39 +2904,22 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
     @app.get("/api/courses/{course_id}/report", dependencies=[Depends(authorize)])
     def report(course_id: Identifier, user: CurrentUser = Depends(authorize)):
         require_course(course_id, user)
+        store = conversation_store()
+        snapshot = report_snapshot(store, user.id, course_id)
         attempts = [
             item
-            for item in conversation_store().scan("attempt", {"course_id": course_id})
+            for item in store.scan("attempt", {"course_id": course_id})
             if item.get("user_id") == user.id and item.get("status") == "submitted"
         ]
         attempts.sort(
             key=lambda item: item.get("submitted_at") or item.get("created_at", ""),
             reverse=True,
         )
-        question_count = sum(item.get("question_count", 0) for item in attempts)
-        average = (
-            round(sum(item.get("score", 0) for item in attempts) / len(attempts), 1)
-            if attempts
-            else 0
-        )
-        topic_scores: dict[str, list[float]] = {}
-        for attempt in attempts:
-            questions = {
-                q["id"]: q for q in attempt.get("assessment", {}).get("reference_questions", [])
-            }
-            for grade in attempt.get("assessment", {}).get("items", []):
-                topic = questions.get(grade["question_id"], {}).get("knowledge_point", "未分类")
-                topic_scores.setdefault(topic, []).append(grade["score"])
-        topics = [
-            {"name": name, "score": round(sum(scores) / len(scores), 1)}
-            for name, scores in topic_scores.items()
-        ]
-        topics.sort(key=lambda item: item["score"])
         return {
-            "attempt_count": len(attempts),
-            "question_count": question_count,
-            "average_score": average,
-            "topics": topics,
+            "attempt_count": snapshot["attempt_count"],
+            "question_count": snapshot["question_count"],
+            "average_score": snapshot["average_score"] or 0,
+            "topics": snapshot["topics"],
             "attempts": attempts[:10],
         }
 
