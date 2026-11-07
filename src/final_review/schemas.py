@@ -329,7 +329,7 @@ class ChatRequest(Model):
 
 class ChatDecision(Model):
     intent: Literal["note", "quiz", "ask", "clarify"] = "ask"
-    action: Literal["general", "overview", "search", "read"] = "search"
+    action: Literal["general", "overview", "search", "read", "report", "mistakes"] = "search"
     overview_kind: Literal["course", "statistics", "list", "all"] = "all"
     query: Annotated[str, Field(max_length=2000)] = ""
     source_document_ids: list[Identifier] | None = Field(default=None, max_length=100)

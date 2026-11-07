@@ -271,6 +271,7 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
         content: str,
         *,
         draft: dict | None = None,
+        action_cards: list[dict] | None = None,
     ):
         store = conversation_store()
         key = stable_key(course_id, conversation_id, "note", event_id)
@@ -286,6 +287,8 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
         }
         if draft:
             item["draft"] = draft
+        if action_cards:
+            item["action_cards"] = action_cards
         store.put("message", key, item)
 
     def note_state(
@@ -700,7 +703,8 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             "利用当前对话历史承接上次追问；肯定回复可确认上次任务，task_message写完整任务要求。"
             "不要根据单个关键词或旧对话标题决定当前意图。"
             "action只能为general（自由讨论无需资料）、overview（课程或资料概况）、"
-            "search（知识点检索）、read（总结指定文件、比较资料、通读）。"
+            "search（知识点检索）、read（总结指定文件、比较资料、通读）、"
+            "report（分析当前课程学习报告）、mistakes（分析当前课程错题）。"
             "课程概念解释、知识点分析、如何理解某个术语默认search，先查课程资料。"
             "general只用于寒暄、闲聊和不涉及具体课程知识的交流；不能因为用户说分析就跳过资料。"
             "overview_kind为course、statistics、list或all。query是相关知识点的简短检索词。"
@@ -2030,6 +2034,122 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
                 "quiz_job": quiz_job,
                 "model": settings.get_chat_model(request.model_id).label,
             }
+        if decision.action in {"report", "mistakes"}:
+            store = conversation_store()
+            cards = [
+                {"label": "打开学习报告", "href": "#report", "kind": "link"},
+                {"label": "查看错题", "href": "#mistakes", "kind": "link"},
+                {
+                    "label": "按薄弱点生成试卷",
+                    "prompt": "请根据我的学习报告和错题，生成一份针对薄弱知识点的复习试卷。",
+                    "kind": "prompt",
+                },
+            ]
+            if decision.action == "report":
+                attempts = [
+                    item
+                    for item in store.scan("attempt", {"course_id": request.course_id})
+                    if item.get("user_id") == user.id and item.get("status") == "submitted"
+                ]
+                grades = [
+                    grade
+                    for item in attempts
+                    for grade in item.get("assessment", {}).get("items", [])
+                ]
+                topic_scores: dict[str, list[float]] = {}
+                for item in attempts:
+                    questions = {
+                        q["id"]: q
+                        for q in item.get("assessment", {}).get("reference_questions", [])
+                    }
+                    for grade in item.get("assessment", {}).get("items", []):
+                        topic = questions.get(grade["question_id"], {}).get(
+                            "knowledge_point", "未分类"
+                        )
+                        topic_scores.setdefault(topic, []).append(float(grade.get("score", 0)))
+                weakest = sorted(
+                    (
+                        {"name": topic, "score": round(sum(values) / len(values), 1)}
+                        for topic, values in topic_scores.items()
+                    ),
+                    key=lambda item: item["score"],
+                )[:5]
+                summary = {
+                    "attempt_count": len(attempts),
+                    "question_count": len(grades),
+                    "average_score": round(
+                        sum(float(item.get("score", 0)) for item in attempts) / len(attempts), 1
+                    )
+                    if attempts
+                    else None,
+                    "weakest_topics": weakest,
+                }
+                reply = (
+                    f"已根据本课程已提交的正式测验整理报告：{len(attempts)} 场测验、"
+                    f"{len(grades)} 道已评分题目。"
+                )
+                if attempts:
+                    reply += f"测验平均得分为 {summary['average_score']}。"
+                else:
+                    reply += "目前还没有已提交的正式测验，因此暂时无法计算得分趋势。"
+                if weakest:
+                    reply += (
+                        "当前得分较低的知识点："
+                        + "、".join(f"{item['name']}（{item['score']}）" for item in weakest)
+                        + "。"
+                    )
+                else:
+                    reply += "目前没有可用于比较的知识点得分。"
+            else:
+                items = list_mistakes(store, user.id, course_id=request.course_id)["items"]
+                counts: dict[str, int] = {}
+                for item in items:
+                    point = item.get("knowledge_point") or "未分类"
+                    counts[point] = counts.get(point, 0) + 1
+                weak = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))[:5]
+                summary = {
+                    "mistake_count": len(items),
+                    "unmastered_count": sum(
+                        item.get("mastery_status") != "mastered" for item in items
+                    ),
+                    "weakest_topics": [{"name": name, "mistakes": count} for name, count in weak],
+                }
+                reply = (
+                    f"本课程目前有 {len(items)} 道错题，"
+                    f"其中 {summary['unmastered_count']} 道尚未标记为已掌握。"
+                )
+                if weak:
+                    reply += (
+                        "错题较集中的知识点："
+                        + "、".join(f"{name}（{count} 道）" for name, count in weak)
+                        + "。"
+                    )
+                else:
+                    reply += "目前还没有错题记录。"
+            note_message(
+                request.course_id,
+                request.conversation_id,
+                user,
+                uuid4().hex,
+                "user",
+                request.message,
+            )
+            note_message(
+                request.course_id,
+                request.conversation_id,
+                user,
+                uuid4().hex,
+                "assistant",
+                reply,
+                action_cards=cards,
+            )
+            return {
+                "kind": "chat",
+                "intent": intent,
+                "reply": reply,
+                "model": settings.get_chat_model(request.model_id).label,
+                "action_cards": cards,
+            }
         result = chat(
             request.model_copy(
                 update={
@@ -2842,7 +2962,15 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
     @app.get("/api/courses/{course_id}/report", dependencies=[Depends(authorize)])
     def report(course_id: Identifier, user: CurrentUser = Depends(authorize)):
         require_course(course_id, user)
-        attempts = conversation_store().scan("attempt", {"course_id": course_id})
+        attempts = [
+            item
+            for item in conversation_store().scan("attempt", {"course_id": course_id})
+            if item.get("user_id") == user.id and item.get("status") == "submitted"
+        ]
+        attempts.sort(
+            key=lambda item: item.get("submitted_at") or item.get("created_at", ""),
+            reverse=True,
+        )
         question_count = sum(item.get("question_count", 0) for item in attempts)
         average = (
             round(sum(item.get("score", 0) for item in attempts) / len(attempts), 1)
@@ -2867,7 +2995,7 @@ def create_app(settings: Settings | None = None, agent: FinalReviewAgent | None 
             "question_count": question_count,
             "average_score": average,
             "topics": topics,
-            "attempts": attempts[-10:],
+            "attempts": attempts[:10],
         }
 
     @app.post("/agent/recover", response_model=AgentResponse, dependencies=[Depends(authorize)])

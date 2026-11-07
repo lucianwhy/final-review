@@ -257,6 +257,78 @@ def test_course_identity_statistics_and_latest_materials(chat_setup):
     assert len(setup.calls) == 5  # metadata answers require no second model call
 
 
+def test_agent_report_analysis_uses_owned_course_attempts_and_persists_actions(chat_setup):
+    setup = chat_setup
+    setup.system.store.put(
+        "attempt",
+        "attempt-report",
+        {
+            "attempt_id": "attempt-report",
+            "course_id": setup.course_id,
+            "user_id": "local-user",
+            "status": "submitted",
+            "score": 40,
+            "assessment": {
+                "items": [{"question_id": "q1", "score": 40}],
+                "reference_questions": [{"id": "q1", "knowledge_point": "三次握手"}],
+            },
+        },
+    )
+    setup.system.store.put(
+        "attempt",
+        "attempt-other-user",
+        {
+            "attempt_id": "attempt-other-user",
+            "course_id": setup.course_id,
+            "user_id": "other-user",
+            "status": "submitted",
+            "score": 0,
+            "assessment": {"items": [], "reference_questions": []},
+        },
+    )
+    setup.decisions["分析一下我的学习报告"] = {"action": "report"}
+
+    result = send(setup, "分析一下我的学习报告")
+
+    assert result.status_code == 200
+    payload = result.json()
+    assert "1 场测验、1 道已评分题目" in payload["reply"]
+    assert "三次握手（40.0）" in payload["reply"]
+    assert [card["kind"] for card in payload["action_cards"]] == ["link", "link", "prompt"]
+    report = setup.client.get(f"/api/courses/{setup.course_id}/report").json()
+    assert report["attempt_count"] == 1
+    assert report["topics"] == [{"name": "三次握手", "score": 40.0}]
+    history = setup.client.get(f"/api/courses/{setup.course_id}/conversations/one/messages").json()[
+        "items"
+    ]
+    assert history[-1]["action_cards"] == payload["action_cards"]
+
+
+def test_agent_mistake_analysis_summarizes_course_records(chat_setup):
+    setup = chat_setup
+    setup.decisions["错题集中在哪些知识点"] = {"action": "mistakes"}
+    setup.system.store.put(
+        "mistake",
+        "mistake-owned",
+        {
+            "mistake_id": "mistake-owned",
+            "user_id": "local-user",
+            "course_id": setup.course_id,
+            "knowledge_point": "三次握手",
+            "mastery_status": "unmastered",
+            "created_at": "2026-11-07T00:00:00+00:00",
+        },
+    )
+
+    response = send(setup, "错题集中在哪些知识点")
+    assert response.status_code == 200, response.json()["detail"].encode("unicode_escape")
+    payload = response.json()
+
+    assert "目前有 1 道错题，其中 1 道尚未标记为已掌握" in payload["reply"]
+    assert "三次握手（1 道）" in payload["reply"]
+    assert payload["action_cards"][1]["href"] == "#mistakes"
+
+
 def test_scoped_retrieval_citations_and_independent_history(chat_setup):
     setup = chat_setup
     setup.system.kb.ingest(
